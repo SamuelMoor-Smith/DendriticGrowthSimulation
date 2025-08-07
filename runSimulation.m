@@ -4,7 +4,7 @@ function [o1,o2] = runSimulation(params)
     I_saved = [];
     t_saved = [];
 
-    rng(0)
+    rng(1)
 
     % ------------------------
     % Unpack parameters
@@ -12,14 +12,17 @@ function [o1,o2] = runSimulation(params)
     n = params.n;
     To = params.To;
     tspan = params.tspan;
-    xoWidth = params.xoWidth;
-    yoHeight = params.yoHeight;
+
+    Lx = params.Lx; % Size of material
+    Ly = params.Ly; % Size of material
+    electrode_width = params.electrode_width;
+    electrode_height = params.electrode_height;
 
     % ------------------------
     % Randomize initial particle positions
     % ------------------------
-    xo = -xoWidth.*rand(n,1); 
-    yo = linspace(-yoHeight/2,yoHeight/2,n).';
+    xo = 10.*rand(n,1); 
+    yo = electrode_height.*rand(n,1) - 0.5*electrode_height;
 
     % ------------------------
     % Zero all initial particle velocities
@@ -37,6 +40,10 @@ function [o1,o2] = runSimulation(params)
     % ------------------------
     tic;
         disp("Starting the solver");
+        tic;
+        global tindex V
+        V = params.V; % Set the initial voltage
+        tindex = 1; % Initialize the time index for the simulation
         [t,states]=ode45(@(t,states) calculateForces(t, states, params), tspan, initial);
     toc;
 
@@ -48,47 +55,70 @@ function [o1,o2] = runSimulation(params)
     % states = A(:,2:end);      % Remaining columns are the states
 
     X_pos = states(:,1:n);      % First n columns are x-positions
-    Y_pos = states(:,2*n:3*n);  % Third group of n columns are y-positions
+    Y_pos = states(:,2*n+1:3*n);  % Third group of n columns are y-positions
     
     %produce 2D plot of particle positions, save as gif
     fig = figure(4);
     h2 = tiledlayout(2,2); 
-    ax1 = nexttile([2 1]);
-    ax2 = nexttile;
-    ax3 = nexttile;
+    ax1 = nexttile([1 2]);
 
-    hold(ax1,'off')
-    hold(ax2,'on')
-    hold(ax3,'on')
+    % Set axis limits and labels once
+    xlim(ax1, [-electrode_width - 5, Lx+electrode_width + 5]);
+    ylim(ax1, [-electrode_height/2 - 5, electrode_height/2 + 5]);
+    xlabel(ax1, 'x-position');
+    ylabel(ax1, 'y-position');
+
+    hold(ax1, 'on')  % Keep everything on the same axes
+
+    % Draw patch background once
+    patch(ax1, ...
+        [-electrode_width, 0, 0, -electrode_width], ...
+        [-electrode_height/2, -electrode_height/2, electrode_height/2, electrode_height/2], ...
+        [1.0, 0.8431, 0.0], ...
+        'EdgeColor', 'none', ...
+        'FaceAlpha', 0.3);  % Optional transparency
+    
+    patch(ax1, ...
+        [Lx+electrode_width, Lx, Lx, Lx+electrode_width], ...
+        [-electrode_height/2, -electrode_height/2, electrode_height/2, electrode_height/2], ...
+        [1.0, 0.8431, 0.0], ...
+        'EdgeColor', 'none', ...
+        'FaceAlpha', 0.3);  % Optional transparency
+
+    % Plot static pinning sites
+    % plot(ax1, params.x_pin, params.y_pin, 'rx', 'MarkerSize', 6, 'LineWidth', 1.5);
+    w_pin = params.w_pin;
+    R_pin = params.R_pin;
+
+    x = linspace(0, Lx, 100);
+    y = linspace(-Ly/2, Ly/2, 100);
+    [X, Y] = meshgrid(x, y);
+    U = (w_pin / 2) * (sin((2 * pi * (X + Y)) / R_pin) + cos((2 * pi * (X - Y)) / R_pin));
+    
+    % Transparent surface at z = 0
+    surf(ax1, X, Y, zeros(size(U)), U, ...
+        'EdgeColor', 'none', 'FaceAlpha', 0.3);  % Apply transparency
+
+    colormap(ax1, 'pink')
+
+
+    % Initialize handle for particle plot
+    hParticles = plot(ax1, X_pos(1,1:n), Y_pos(1,1:n), 'b.');
 
     for idx=1:length(t)
-        plot(ax1, X_pos(idx,1:n), Y_pos(idx,1:n),'b.')
-        plot(ax2, X_pos(idx,1:n), Y_pos(idx,1:n),'b.')
 
-        % xlim(ax1,[-100e-6,100e-6])
-        xlim(ax1, [0, 100e-6])
-        ylim(ax1,[-5e-6,5e-6])
+        % Update particle positions
+        set(hParticles, 'XData', X_pos(idx,1:n), 'YData', Y_pos(idx,1:n));
 
-        xlabel(ax1,'x-position')
-        ylabel(ax1,'y-position')
+        % Update legend or annotation
+        legend(ax1, num2str(t(idx)));
 
-        xlim(ax2,[0,100e-6])
-        ylim(ax2,[-5e-6,5e-6])
-
-        xlabel(ax2,'x-position')
-        ylabel(ax2,'y-position')
-
-        % xlim(ax3,[0,2.5e-4])
-        % ylim(ax3,[0,max(I)])
-
-        xlabel(ax3,'Time')
-        ylabel(ax3,'Current')
-
-        %pause
-        legend(num2str(t(idx)))
         drawnow
+
+        % Save frame for GIF
         frame = getframe(fig);
         im{idx} = frame2im(frame);
+
     end
 
     filename = sprintf('dendrite_growthNEW%d.gif', i);

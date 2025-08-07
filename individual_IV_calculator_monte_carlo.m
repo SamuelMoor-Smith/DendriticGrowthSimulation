@@ -1,6 +1,6 @@
 function [I] = individual_IV_calculator_monte_carlo(x, y, L, V, lambda, Rt,steps)
 
-newL = 200e-6;
+newL = 200;
 
 xi = x';
 yi = y';
@@ -12,7 +12,7 @@ sz = size(x);
 % t1 = sz(1);
 % n = sz(2);
 
-threshold_dist = 50e-6;
+threshold_dist = 50;
 
 min_distance_to_end = min(newL - x, [], 'all');
 if min_distance_to_end > threshold_dist

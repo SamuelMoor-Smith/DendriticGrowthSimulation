@@ -10,36 +10,40 @@
 % ------------------------
 % s = rng; % Get the current random number generator settings
 % disp(s.Seed);
-rng(42)
+rng(2)
 
 % ------------------------
 % Basic Simulation Parameters
 % ------------------------
 params.i = 1; % Simulation Number
-params.fin = 1; % Something to do with stopping the simulation at a point
+params.fin = 1; % If 1, stops movement of particles once they hit the other end
 
 % ------------------------
 % Well-understood Physical Constants
 % ------------------------
-params.kB = 1.38e-23; % !!! Boltzmann constant [J/K]
+% params.kB = 1.38e-11; % !!! Boltzmann constant [J/K]
+params.T_coeff = 5000; % !!! Temperature coefficient [K^-1] -- this is a guess, not sure what to use here
 
 % ------------------------
 % Simulation Length and Particle Count
 % ------------------------ß
-params.n = 400; % Number of particles
+params.n = 500; % Number of particles
 n = params.n; % For convenience
 
-simulation_length = 3e-3; % 10 millisecond
-params.tspan=linspace(0,simulation_length,500);
+simulation_length = 6; % 10 milliseconds was too short - actually should be 3 seconds
+params.tspan=linspace(0,simulation_length,2000);
 
 % ------------------------
 % Initial position box and material size
 % ------------------------
-params.L = 50e-6; % Size of material
-L = params.L; % For convenience
+params.Lx = 100; % Size of material
+params.Ly = 100; % Size of material
 
-params.xoWidth = 100e-6; % Width for initial position box
-params.yoHeight = 10e-6; % Height for initial position box
+Lx = params.Lx; % For convenience
+Ly = params.Ly; % For convenience
+
+params.electrode_width = Lx/2; % Width for the gold deposits on either side
+params.electrode_height = Ly; % Height for gold deposits on either side
 
 % ------------------------
 % Heat related parameters
@@ -48,45 +52,48 @@ params.yoHeight = 10e-6; % Height for initial position box
 params.To = 300; % !!! Initial Temperature
 params.Q = 1; % Thermal energy [J]
 % Jasons code?
-params.k = 420/L; % !!! Heat transfer coefficient [W/m^2K] from https://www.spiraxsarco.com/learn-about-steam/steam-engineering-principles-and-heat-transfer/heat-transfer
-params.CT = 0.24*5e-9; % !!! Heat capacity = specific heat capacity*mass [J/K] http://www2.ucdsb.on.ca/tiss/stretton/database/Specific_Heat_Capacity_Table.html
+params.k = 420/Lx; % !!! Heat transfer coefficient [W/m^2K] from https://www.spiraxsarco.com/learn-about-steam/steam-engineering-principles-and-heat-transfer/heat-transfer
+params.CT = 0.24*5e-9; % !!! Heat capacity = specific heat capacity*mass [J/K] http://www2.ucdsb.on.ca/tiss/stretton/database/Specific_Heat_Capacity_Table.html -- check for gold
 
 % ------------------------
 % Pinning Force Parameters
 % ------------------------
-params.m = 20; % Number of sites
-m = params.m; % For convenience
-
-params.wpa_repulse = 0;
-params.wpa_attract = 300;
-params.Rp = 8e-6; % Pinning potential distance
+% params.m = 100; % Number of sites
+% m = params.m; % For convenience
 
 % ------------------------
 % Pinning Site Locations and Forces
 % ------------------------
-wpplus=((rand(1,m)).*params.wpa_attract);
-wpminus=(-(rand(1,0)).*params.wpa_repulse);
-params.wp=[wpplus wpminus];
-params.xp=rand(m,1).*L;
-params.yp=(rand(m,1).*10e-6)-5e-6;
+
+% params.wpa_repulse = 4e7;
+% params.wpa_attract = 4e7;
+% wpplus=((ones(1,0.5*m)).*params.wpa_attract);
+% wpminus=(-(ones(1,0.5*m)).*params.wpa_repulse);
+% params.w_pin=[wpplus wpminus];
+% params.x_pin=rand(m,1).*Lx;
+% params.y_pin=(rand(m,1).*Ly)-0.5*Ly;
+
+params.w_pin = 100; % Pinning potential amplitude
+params.R_pin = 5; % Pinning potential distance
 
 % ------------------------
 % Applied Electric Field Parameters
 % ------------------------
 params.V = 1; % Applied Voltage
-params.alpha = rand(n,1).*8e-3;
+params.alpha = rand(n,1).*1e5;
 
 % ------------------------
 % Drag Force Parameters
 % ------------------------
-params.eta = rand(n,1).*4 + 1; % Viscousity
-params.Cd = 1.8e4; % Drag Coefficient
+params.eta = 1; % Viscousity
+params.Cd = 50; % 1.8e4; % Drag Coefficient
 
 % ------------------------
 % Interfacial Potential Parameters
 % ------------------------
-params.wI = 4e3; % Interfacial potential amplitude
-params.RI = 7e-6; % Interfacial potential distance
+params.wI = 2e4; % Interfacial potential amplitude only with clusters
+params.RI = 25; % Interfacial potential distance only with clusters
+
 
 % ------------------------
 % Residual Stress Parameters
@@ -102,7 +109,7 @@ params.r_Ag=126e-12; % Silver ion radius
 % ------------------------
 params.num_e = 1000; % Number of electrons to simulate
 params.Rt = 1;                         
-params.lambda = 5e-6;
+params.lambda = 5;
 params.steps = 1000;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
