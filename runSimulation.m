@@ -93,14 +93,23 @@ function [o1,o2] = runSimulation(params)
     x = linspace(0, Lx, 100);
     y = linspace(-Ly/2, Ly/2, 100);
     [X, Y] = meshgrid(x, y);
-    U = (w_pin / 2) * (sin((2 * pi * (X + Y)) / R_pin) + cos((2 * pi * (X - Y)) / R_pin));
-    
-    % Transparent surface at z = 0
-    surf(ax1, X, Y, zeros(size(U)), U, ...
+    % U = (w_pin / 2) * (sin((2 * pi * (X + Y)) / R_pin) + cos((2 * pi * (X - Y)) / R_pin));
+    U = zeros(size(X));
+    for k = 1:numel(params.w_pin)
+        dx = X - params.x_pin(k);
+        dy = Y - params.y_pin(k);
+        U = U + params.w_pin(k) .* exp(-(dx.^2 + dy.^2) / (params.R_pin(k)^2));
+    end
+     % Transparent surface at z = 0
+    hSurf = surf(ax1, X, Y, zeros(size(U)), U, ...
         'EdgeColor', 'none', 'FaceAlpha', 0.3);  % Apply transparency
 
     colormap(ax1, 'pink')
 
+    % Add a colorbar to show U values
+    cb = colorbar(ax1);
+    cb.Label.String = 'Pinning Potential U';
+    caxis(ax1, [min(U(:)) max(U(:))]); % match to actual range
 
     % Initialize handle for particle plot
     hParticles = plot(ax1, X_pos(1,1:n), Y_pos(1,1:n), 'b.');

@@ -38,7 +38,15 @@ function dxdt = calculateForces(t, states, params)
         % I_last = individual_IV_calculator_monte_carlo(x_p, y_p, 200e-6, V, 4.5e-6, 1, 120);
         % % end
         tindex = tindex + 1;
-        if tindex > 1000 & V > 0
+        % if tindex < 100 & V > 0
+        %     V = 0;
+        %     disp('Voltage set to zero after 250 iterations');
+        % end
+        % if tindex > 100 & V == 0
+        %     V = params.V; % Reset voltage after 100 iterations
+        %     disp('Voltage reset to initial value');
+        % end
+        if tindex > 1100 & V > 0
             V = 0;
             disp('Voltage set to zero after 250 iterations');
         end
@@ -70,7 +78,7 @@ function dxdt = calculateForces(t, states, params)
     FI_x = interfacial_force(n, x_p, y_p, params.wI, params.RI, params.Lx);
     % FI_x = zeros(n, 1);
     % FI_y = zeros(n, 1); % Initialize interfacial forces
-    [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, params.w_pin, params.R_pin, params.Lx);
+    [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, params.w_pin, params.x_pin, params.y_pin, params.R_pin, params.Lx);
     % Fp_x = zeros(n, 1); % Initialize pinning forces
     % Fp_y = zeros(n, 1); % Initialize pinning forces
     [Ft_x, Ft_y] = temperature_fluctuations(n, eta, params.T_coeff, T, rand_dirs_global_x, rand_dirs_global_y);
@@ -79,6 +87,7 @@ function dxdt = calculateForces(t, states, params)
 
     % If the particle has reached the end, set the velocity to zero
     fin_array = finishing_array(x_p, params.Lx, params.fin);
+
     forces_x = Fa_x + Fd_x + FI_x + Fp_x + Ft_x; % Total force in x direction
     forces_y = 0    + Fd_y + 0    + Fp_y + Ft_y; % Total force in y direction
 
@@ -179,17 +188,58 @@ end
 % % Pinning Force
 % % ------------------------
 
-function [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, w_pin, R_pin, Lx)
+% function [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, w_pin, R_pin, Lx)
 
-    % Initialize force to zero
-    Fp_x = zeros(n, 1);
-    Fp_y = zeros(n, 1);
+%     % Initialize force to zero
+%     Fp_x = zeros(n, 1);
+%     Fp_y = zeros(n, 1);
 
-    % Logical index of particles within [0, Lx]
-    inside = (x_p > 0) & (x_p < Lx);
+%     % Logical index of particles within [0, Lx]
+%     inside = (x_p > 0) & (x_p < Lx);
 
-    Fp_x(inside) = -(w_pin * pi / R_pin) * ( cos((2 * pi * (x_p(inside) + y_p(inside)) ) / R_pin) + cos((2 * pi * (x_p(inside) - y_p(inside)) ) / R_pin) );
-    Fp_y(inside) = -(w_pin * pi / R_pin) * ( cos((2 * pi * (x_p(inside) + y_p(inside)) ) / R_pin) - cos((2 * pi * (x_p(inside) - y_p(inside)) ) / R_pin) );
+%     Fp_x(inside) = -(w_pin * pi / R_pin) * ( cos((2 * pi * (x_p(inside) + y_p(inside)) ) / R_pin) + cos((2 * pi * (x_p(inside) - y_p(inside)) ) / R_pin) );
+%     Fp_y(inside) = -(w_pin * pi / R_pin) * ( cos((2 * pi * (x_p(inside) + y_p(inside)) ) / R_pin) - cos((2 * pi * (x_p(inside) - y_p(inside)) ) / R_pin) );
+% end
+
+function [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, w_pin, x_pin, y_pin, R_pin, Lx)
+    assert(isvector(x_p) && isvector(y_p), 'x_p and y_p must be vectors');
+    assert(length(x_p) == length(y_p), 'x_p and y_p must be the same length');
+    assert(length(x_p) == n, 'x_p must have length n');
+
+    Fp_x=zeros(n,1);
+    Fp_y=zeros(n,1);
+    for i=1:length(w_pin)
+
+        assert(isscalar(x_pin(i)) && isscalar(y_pin(i)), 'xp and yp must be scalars for each pinning site');
+        [d,dx,dy] = distances(x_p, x_pin(i), y_p, y_pin(i));
+
+        F = (2 * w_pin(i) / (R_pin(i)^2)) .* exp(-(d.^2) / (R_pin(i)^2));
+
+        % assert(all(d < 200e-6), 'Distance d must be less than 200e-6 for pinning force calculation');
+        
+        % Note, I played around with this function quite a bit
+        % F=2*10*wp(i).*((d.^2/Rp^2).^9).*exp(-((d.^2/Rp^2).^10));
+        % F=(2 * w_pin(i) / (R_pin^2)) .* exp(-(d.^2) / (R_pin^2));
+        % F = wp(i) .* exp(- (d / Rp).^2);
+        % cutoff = 5e-6;
+
+        % % Smooth cutoff mask: 1 where d < cutoff, 0 elsewhere
+        % mask = d < cutoff;
+
+        % % Simple Gaussian-like force profile inside cutoff
+        % F = zeros(n,1);
+        % F(mask) = w_pin(i) * exp(- (d(mask) / R_pin).^2);
+
+        % assert(all(size(dx) == size(F)), 'dx and F must be the same size');
+        % assert(all(~isnan(F)), 'Pinning force contains NaNs');
+        % assert(all(~isinf(F)), 'Pinning force contains Infs');
+
+        % Sum all the forces
+        Fp_x = Fp_x + (F.*dx);
+        Fp_y = Fp_y + (F.*dy);
+        % Fp_x(mask) = Fp_x(mask) + F(mask) .* dx(mask);
+        % Fp_y(mask) = Fp_y(mask) + F(mask) .* dy(mask);
+    end
 end
 
 % % ------------------------
