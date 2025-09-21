@@ -84,12 +84,14 @@ function dxdt = calculateForces(t, states, params)
     [Ft_x, Ft_y] = temperature_fluctuations(n, eta, params.T_coeff, T, rand_dirs_global_x, rand_dirs_global_y);
     % Ft_x = zeros(n, 1); % Initialize temperature fluctuation forces
     % Ft_y = zeros(n, 1); % Initialize temperature fluctuation forces
+    [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,params.Lx, params.Ly);
+    [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, params.Lx, params.Ly);
 
     % If the particle has reached the end, set the velocity to zero
     fin_array = finishing_array(x_p, params.Lx, params.fin);
 
-    forces_x = Fa_x + Fd_x + FI_x + Fp_x + Ft_x; % Total force in x direction
-    forces_y = 0    + Fd_y + 0    + Fp_y + Ft_y; % Total force in y direction
+    forces_x = Fa_x + Fd_x + FI_x + Fp_x + Ft_x + Fr_x + Fc_x; % Total force in x direction
+    forces_y = 0    + Fd_y + 0    + Fp_y + Ft_y + Fr_y + Fc_y; % Total force in y direction
 
     %solve force balance equation in x direction
     dxdt(1:n) = states(n+1:2*n) .* fin_array;
@@ -257,6 +259,112 @@ end
 % % ------------------------
 % TODO: Go over this
 
+function [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,Lx, Ly);
+    
+    cell_size = 5; % Size of each grid cell
+    w_resid = 1; % Strength of residual force
+
+    % ---- Build grid ----
+    Nx = max(1, ceil(Lx / cell_size));
+    Ny = max(1, ceil(Ly / cell_size));
+
+    % Shift y to [0, Ly] if needed (keeps bins consistent)
+    y0 = min(y_p);
+    y_shifted = y_p - y0;  % now spans ~[0, Ly]
+
+    % ---- Bin indices (1-based) ----
+    ix = floor(x_p ./ cell_size) + 1;
+    iy = floor(y_shifted ./ cell_size) + 1;
+
+    % Clamp to grid (non-periodic edges)
+    ix = min(max(ix, 1), Nx);
+    iy = min(max(iy, 1), Ny);
+
+    % ---- Count particles per cell ----
+    count = accumarray([iy, ix], 1, [Ny, Nx]);  % rows=y, cols=x
+
+    % Subtract self from own cell to avoid self-force bias
+    lin_idx = sub2ind([Ny, Nx], iy, ix);
+    count(lin_idx) = max(count(lin_idx) - 1, 0);
+
+    % ---- Neighbour counts (handle zero-gradient boundaries) ----
+    count_left  = [count(:,1),      count(:,1:Nx-1)];
+    count_right = [count(:,2:Nx),   count(:,Nx)];
+
+    count_up    = [count(2:Ny, :);  count(Ny, :)];
+    count_down  = [count(1,   :);   count(1:Ny-1, :)];
+
+    % ---- Local density gradients mapped back to particles ----
+    % Fx ~ rho_right - rho_left; Fy ~ rho_up - rho_down
+    rho_left   = count_left(lin_idx);
+    rho_right  = count_right(lin_idx);
+    rho_up     = count_up(lin_idx);
+    rho_down   = count_down(lin_idx);
+
+    Fr_x = w_resid * (rho_left - rho_right);
+    Fr_y = w_resid * (rho_down - rho_up);
+
+    % Ensure column vectors of length n
+    Fr_x = Fr_x(:);
+    Fr_y = Fr_y(:);
+end
+
+function [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, Lx, Ly)
+% Fast contact repulsion using an exponential cutoff, same-bin pairs only.
+% Particles repel with F = Kc * exp(-d / lambda) * r_hat for d <= r_cut.
+%
+% Tuning (units ~ your domain):
+cell_size = 3.0;   % bin size; choose >= r_cut for speed/coverage
+lambda    = 1.0;   % decay length (how fast force drops with distance)
+r_cut     = 3.0;   % hard cutoff distance (often ~3*lambda)
+Kc        = 500;  % strength scale
+eps0      = 1e-12; % tiny to avoid 0/0
+
+% ---- grid / binning ----
+Nx = max(1, ceil(Lx / cell_size));
+Ny = max(1, ceil(Ly / cell_size));
+
+y0 = min(y_p);
+iy = min(max(floor((y_p - y0) ./ cell_size) + 1, 1), Ny);
+ix = min(max(floor(x_p          ./ cell_size) + 1, 1), Nx);
+
+bins = accumarray([iy, ix], (1:n).', [Ny, Nx], @(v){v}, {[]});
+Fc_x = zeros(n,1); Fc_y = zeros(n,1);
+
+r2_cut = r_cut^2;
+
+% ---- same-bin pairs only (upper triangle) ----
+for by = 1:Ny
+  for bx = 1:Nx
+    A = bins{by,bx};
+    m = numel(A);
+    if m < 2, continue; end
+
+    Ax = x_p(A); Ay = y_p(A);
+    dX = Ax - Ax.'; dY = Ay - Ay.';
+    D2 = dX.^2 + dY.^2;
+
+    mask = triu(true(m),1) & (D2 <= r2_cut);
+    if ~any(mask,'all'), continue; end
+
+    [I,J] = find(mask);
+    dx = Ax(I) - Ax(J); dy = Ay(I) - Ay(J);
+    d  = sqrt(dx.^2 + dy.^2) + eps0;
+
+    % soft exponential repulsion
+    mag = Kc * lambda^2 ./ d.^2;   % scalar per interacting pair
+    fx  = mag .* (dx ./ d);
+    fy  = mag .* (dy ./ d);
+
+    % equal & opposite
+    Fc_x(A(I)) = Fc_x(A(I)) + fx;  Fc_y(A(I)) = Fc_y(A(I)) + fy;
+    Fc_x(A(J)) = Fc_x(A(J)) - fx;  Fc_y(A(J)) = Fc_y(A(J)) - fy;
+  end
+end
+
+% column vectors
+Fc_x = Fc_x(:); Fc_y = Fc_y(:);
+end
 % % Stress-strain relationship to indicate the growth of the filament
 
 % % Stuff here... Need to figure out what states is doing. Does it encode the

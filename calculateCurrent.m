@@ -36,17 +36,17 @@ for i = 1:t1
     
     for j = 1:t2
         
-        a1 = ~ismember(currx(:),pointsx(i,:));
-        a2 = ~ismember(curry(:),pointsy(i,:));
+        % a1 = ~ismember(currx(:),pointsx(i,:));
+        % a2 = ~ismember(curry(:),pointsy(i,:));
         
-        a3 = find(a1 == 1 & a2 == 1);
+        % a3 = find(a1 == 1 & a2 == 1);
         
-        if ~isempty(a3)
-            count = length(a3);
-            pointsx(i,count2:count2+count-1) = currx(a3);
-            pointsy(i,count2:count2+count-1) = curry(a3);
-            count2 = count2 + count;
-        end
+        % if ~isempty(a3)
+        %     count = length(a3);
+        %     pointsx(i,count2:count2+count-1) = currx(a3);
+        %     pointsy(i,count2:count2+count-1) = curry(a3);
+        %     count2 = count2 + count;
+        % end
             
         % Get distances to particles in +x direction
         
