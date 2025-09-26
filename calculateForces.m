@@ -317,7 +317,7 @@ function [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, Lx, Ly)
 cell_size = 3.0;   % bin size; choose >= r_cut for speed/coverage
 lambda    = 1.0;   % decay length (how fast force drops with distance)
 r_cut     = 3.0;   % hard cutoff distance (often ~3*lambda)
-Kc        = 500;  % strength scale
+Kc        = 2000;  % strength scale
 eps0      = 1e-12; % tiny to avoid 0/0
 
 % ---- grid / binning ----
