@@ -1,6 +1,6 @@
 function [o1,o2] = runSimulation(params)
     
-    global I_saved t_saved %#ok<GVMISå>
+    global I_saved t_saved 
     I_saved = [];
     t_saved = [];
 
@@ -114,10 +114,28 @@ function [o1,o2] = runSimulation(params)
     % Initialize handle for particle plot
     hParticles = plot(ax1, X_pos(1,1:n), Y_pos(1,1:n), 'b.');
 
+    % ------------------------
+    % Bottom row: current plot (spans 2 columns)
+    % ------------------------
+    ax2 = nexttile(h2,[1 2]); % NEW
+    hold(ax2,'on'); grid(ax2,'on'); box(ax2,'on'); % NEW
+    xlabel(ax2,'time'); ylabel(ax2,'Current I');   % NEW
+    hI = plot(ax2, NaN, NaN, 'LineWidth', 1.5);    % NEW
+    xlim(ax2, [t(1) t(end)]);                      % NEW
+    ylim(ax2, [0, params.num_e])
+    % y-lims will auto-scale as data arrives
+
     for idx=1:length(t)
 
         % Update particle positions
         set(hParticles, 'XData', X_pos(idx,1:n), 'YData', Y_pos(idx,1:n));
+
+        if ~isempty(t_saved)
+            mask = t_saved <= t(idx);
+            if any(mask)
+                set(hI, 'XData', t_saved(mask), 'YData', I_saved(mask));
+            end
+        end
 
         % Update legend or annotation
         legend(ax1, num2str(t(idx)));

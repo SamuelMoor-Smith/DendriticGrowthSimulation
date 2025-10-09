@@ -1,75 +1,37 @@
-% function [curr_indexes,currx2,curry2] = getNextIndex(i,tot_weights,x,y,currx,curry,curr_indexes)
-% 
-% p = length(currx);
-% n = size(tot_weights,2)-2;
-% 
-% W_normalized = tot_weights./repmat(sum(tot_weights,2),1,size(tot_weights,2));
-% W_cdf = cumsum(W_normalized,2);
-% rands = rand(size(tot_weights,1),1);
-% C = rands<W_cdf;
-% [~,curr_indexes] = max(C,[],2);
-% 
-% currx2 = nan(1,p);
-% curry2 = nan(1,p);
-% 
-% currx2(curr_indexes==n+1) = 0;
-% curry2(curr_indexes==n+1) = 0;
-% 
-% currx2(curr_indexes==n+3) = currx(curr_indexes==n+3);
-% curry2(curr_indexes==n+3) = curry(curr_indexes==n+3);
-% 
-% curr_indexes(curr_indexes==n+1) = nan;
-% curr_indexes(curr_indexes==n+2) = nan;
-% curr_indexes(curr_indexes==n+3) = nan;
-% 
-% % indexes = [1:n,nan];
-% % 
-% % curr_indexes = nan(1,p);
-% % 
-% % for k = 1:p
-% %     
-% %     curr_indexes(k) = randsample(indexes,1,true,tot_weights(k,:));
-% % 
-% % end
-% 
-% % set currx and curry to all-nans of the correct size
-% % update currx where curr_indexes is not nan
-% % fill these with curr_indexes of x (excluding places where curr_indexes is nan)
-% currx2(~isnan(curr_indexes)) = x(i,curr_indexes(~isnan(curr_indexes)));
-% curry2(~isnan(curr_indexes)) = y(i,curr_indexes(~isnan(curr_indexes)));
+function [next_indices,nextx,nexty] = getNextIndex(tot_weights,x,y,currx,curry,curr_indexes, L)
 
-function [curr_indexes,currx,curry] = getNextIndex(i,tot_weights,x,y,currx,curry,curr_indexes)
+num_e = size(tot_weights,1); % total number of electrons
+n = size(tot_weights,2)-2; % number of possible particle targets (minus 2 electrodes)
+LEFT_ELECTRODE = n+1;
+RIGHT_ELECTRODE = n+2;
 
-p = length(currx);
-n = size(tot_weights,2)-2;
+% disp(num_e + " electrons");
+% disp(n + " possible targets");
 
-W_normalized = tot_weights./repmat(sum(tot_weights,2),1,size(tot_weights,2));
-W_cdf = cumsum(W_normalized,2);
-rands = rand(size(tot_weights,1),1);
+% normalized hopping probs per electron with number of particles + 2 (to beginning and end) options
+W_normalized = tot_weights./repmat(sum(tot_weights,2),1,n+2);
+W_cdf = cumsum(W_normalized,2); % cumulative distribution function for transitions
+rands = rand(num_e,1); % random numbers for each electron
+
 C = rands<W_cdf;
-[~,curr_indexes] = max(C,[],2);
+[~,next_indices] = max(C,[],2); % get the index of the first column where rands < cdf, i.e. the next hopping spot
 
-currx = nan(1,p);
-curry = nan(1,p);
+% initialize nextx and nexty
+nextx = zeros(num_e,1);
+nexty = zeros(num_e,1);
 
-currx(curr_indexes==n+1) = 0;
-curry(curr_indexes==n+1) = 0;
+% set beginning positions to be at (0,0)
+% the distance later will not factor in y distance so y=nan is fine
+nextx(next_indices==LEFT_ELECTRODE) = 0;
+nexty(next_indices==LEFT_ELECTRODE) = nan;
 
-curr_indexes(curr_indexes==n+1) = nan;
-curr_indexes(curr_indexes==n+2) = nan;
+% set end positions to be at (L,0)
+% once at end, electron is removed from simulation so y=nan is fine
+nextx(next_indices==RIGHT_ELECTRODE) = L;
+nexty(next_indices==RIGHT_ELECTRODE) = nan;
 
-% indexes = [1:n,nan];
-% 
-% curr_indexes = nan(1,p);
-% 
-% for k = 1:p
-%     
-%     curr_indexes(k) = randsample(indexes,1,true,tot_weights(k,:));
-% 
-% end
-
-% set currx and curry to all-nans of the correct size
-% update currx where curr_indexes is not nan
-% fill these with curr_indexes of x (excluding places where curr_indexes is nan)
-currx(~isnan(curr_indexes)) = x(i,curr_indexes(~isnan(curr_indexes)));
-curry(~isnan(curr_indexes)) = y(i,curr_indexes(~isnan(curr_indexes)));
+% set nextx and nexty to be the positions of the particles they hop to
+% only do this for electrons that are hopping to a particle (not beginning or end)
+not_begin_or_end = (next_indices~=n+1) & (next_indices~=n+2);
+nextx(not_begin_or_end) = x(next_indices(not_begin_or_end));
+nexty(not_begin_or_end) = y(next_indices(not_begin_or_end));

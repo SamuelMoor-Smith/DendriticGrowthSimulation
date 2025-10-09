@@ -27,11 +27,11 @@ params.T_coeff = 3000; % !!! Temperature coefficient [K^-1] -- this is a guess, 
 
 % ------------------------
 % Simulation Length and Particle Count
-% ------------------------ß
+% ------------------------
 params.n = 500; % Number of particles
 n = params.n; % For convenience
 
-simulation_length = 6; % 10 milliseconds was too short - actually should be 3 seconds
+simulation_length = 6; % in seconds
 params.tspan=linspace(0,simulation_length,2000);
 
 % ------------------------
@@ -108,10 +108,10 @@ params.r_Ag=126e-12; % Silver ion radius
 % ------------------------
 % Current Calculation Parameters
 % ------------------------
-params.num_e = 1000; % Number of electrons to simulate
+params.num_e = 50; % Number of electrons to simulate
 params.Rt = 1;                         
-params.lambda = 5;
-params.steps = 1000;
+params.lambda = 2;
+params.steps = 120;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

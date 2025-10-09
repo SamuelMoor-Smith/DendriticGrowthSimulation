@@ -4,6 +4,13 @@ function dxdt = calculateForces(t, states, params)
 
     global tindex V
 
+    global I_saved t_saved I_last
+    if isempty(I_saved)
+        I_saved = []; % Initialize if empty
+        t_saved = [];
+        I_last = 0;
+    end
+
     global rand_dirs_global_x rand_dirs_global_y
     if isempty(rand_dirs_global_x)
         rand_dirs_global_x = 2 * randi([0 1], params.n, 1) - 1;
@@ -27,65 +34,42 @@ function dxdt = calculateForces(t, states, params)
 
 
     % ------------------------
-    % Calculate drag based on position
+    % Calculate current at intervals
     % ------------------------
-    % eta = calculate_eta(x_p, y_p, params.eta, params.xp, params.yp);
-    
     if tindex <= length(params.tspan) && t > params.tspan(tindex)
         rand_dirs_global_x = 2 * randi([0 1], n, 1) - 1;
         rand_dirs_global_y = 2 * randi([0 1], n, 1) - 1;
-        % % if mod(tspan_index,2) == 0
-        % I_last = individual_IV_calculator_monte_carlo(x_p, y_p, 200e-6, V, 4.5e-6, 1, 120);
-        % % end
-        tindex = tindex + 1;
-        % if tindex < 100 & V > 0
-        %     V = 0;
-        %     disp('Voltage set to zero after 250 iterations');
-        % end
-        % if tindex > 100 & V == 0
-        %     V = params.V; % Reset voltage after 100 iterations
-        %     disp('Voltage reset to initial value');
-        % end
-        if tindex > 1100 & V > 0
-            V = 0;
-            disp('Voltage set to zero after 250 iterations');
+        if mod(tindex,2) == 0
+            I_last = calculateCurrent(x_p, y_p, params.Lx, V, params.lambda, params.Rt, params.steps, params.num_e);
         end
-        disp(num2str(tindex))
-        % disp(distances(params.xp, x_p(1), params.yp, y_p(1)))
-        % disp(['Computed I at t = ', num2str(tspan_index), ' | I = ', num2str(I_last)]);
+        tindex = tindex + 1;
+        if tindex > 1000 & V > 0
+            V = 0;
+            disp('Voltage set to zero after 1000 iterations');
+        end
+        disp(['Time index: ', num2str(tindex), ' / ', num2str(length(params.tspan))]);
+        disp(['Computed I at t = ', num2str(tindex), ' | I = ', num2str(I_last)]);
         toc;
         tic;
 
-        % % Save computed current and time
-        % I_saved = [I_saved; I_last];
-        % t_saved = [t_saved; t];
-        
-        % compliance = 1;
-        % total_e = 50;
-        % res = total_e*V/I_last;
-        % % V = (compliance * res);
-        % if I_last > compliance * total_e
-        %     V = 0.8*(V);
-        % end
-        % disp(['Updated Voltage: ', num2str(V)]);
+        % Save computed current and time
+        I_saved = [I_saved; I_last];
+        t_saved = [t_saved; t];
     end
 
     % ------------------------
     % Forces
     % ------------------------
+    % eta = calculate_eta(x_p, y_p, params.eta, params.xp, params.yp);
     Fa_x = applied_force(n, x_p, params.alpha, V, params.Lx);
     [Fd_x, Fd_y] = drag_force(n, x_v, y_v, params.eta, params.Cd);
     FI_x = interfacial_force(n, x_p, y_p, params.wI, params.RI, params.Lx);
-    % FI_x = zeros(n, 1);
-    % FI_y = zeros(n, 1); % Initialize interfacial forces
     [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, params.w_pin, params.x_pin, params.y_pin, params.R_pin, params.Lx);
-    % Fp_x = zeros(n, 1); % Initialize pinning forces
-    % Fp_y = zeros(n, 1); % Initialize pinning forces
     [Ft_x, Ft_y] = temperature_fluctuations(n, eta, params.T_coeff, T, rand_dirs_global_x, rand_dirs_global_y);
-    % Ft_x = zeros(n, 1); % Initialize temperature fluctuation forces
-    % Ft_y = zeros(n, 1); % Initialize temperature fluctuation forces
     [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,params.Lx, params.Ly);
-    [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, params.Lx, params.Ly);
+    % [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, params.Lx, params.Ly);
+    Fc_x = zeros(n, 1); % Initialize contact forces
+    Fc_y = zeros(n, 1); % Initialize contact forcesåå
 
     % If the particle has reached the end, set the velocity to zero
     fin_array = finishing_array(x_p, params.Lx, params.fin);
@@ -190,19 +174,6 @@ end
 % % Pinning Force
 % % ------------------------
 
-% function [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, w_pin, R_pin, Lx)
-
-%     % Initialize force to zero
-%     Fp_x = zeros(n, 1);
-%     Fp_y = zeros(n, 1);
-
-%     % Logical index of particles within [0, Lx]
-%     inside = (x_p > 0) & (x_p < Lx);
-
-%     Fp_x(inside) = -(w_pin * pi / R_pin) * ( cos((2 * pi * (x_p(inside) + y_p(inside)) ) / R_pin) + cos((2 * pi * (x_p(inside) - y_p(inside)) ) / R_pin) );
-%     Fp_y(inside) = -(w_pin * pi / R_pin) * ( cos((2 * pi * (x_p(inside) + y_p(inside)) ) / R_pin) - cos((2 * pi * (x_p(inside) - y_p(inside)) ) / R_pin) );
-% end
-
 function [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, w_pin, x_pin, y_pin, R_pin, Lx)
     assert(isvector(x_p) && isvector(y_p), 'x_p and y_p must be vectors');
     assert(length(x_p) == length(y_p), 'x_p and y_p must be the same length');
@@ -217,30 +188,9 @@ function [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, w_pin, x_pin, y_pin, R_pin, L
 
         F = (2 * w_pin(i) / (R_pin(i)^2)) .* exp(-(d.^2) / (R_pin(i)^2));
 
-        % assert(all(d < 200e-6), 'Distance d must be less than 200e-6 for pinning force calculation');
-        
-        % Note, I played around with this function quite a bit
-        % F=2*10*wp(i).*((d.^2/Rp^2).^9).*exp(-((d.^2/Rp^2).^10));
-        % F=(2 * w_pin(i) / (R_pin^2)) .* exp(-(d.^2) / (R_pin^2));
-        % F = wp(i) .* exp(- (d / Rp).^2);
-        % cutoff = 5e-6;
-
-        % % Smooth cutoff mask: 1 where d < cutoff, 0 elsewhere
-        % mask = d < cutoff;
-
-        % % Simple Gaussian-like force profile inside cutoff
-        % F = zeros(n,1);
-        % F(mask) = w_pin(i) * exp(- (d(mask) / R_pin).^2);
-
-        % assert(all(size(dx) == size(F)), 'dx and F must be the same size');
-        % assert(all(~isnan(F)), 'Pinning force contains NaNs');
-        % assert(all(~isinf(F)), 'Pinning force contains Infs');
-
         % Sum all the forces
         Fp_x = Fp_x + (F.*dx);
         Fp_y = Fp_y + (F.*dy);
-        % Fp_x(mask) = Fp_x(mask) + F(mask) .* dx(mask);
-        % Fp_y(mask) = Fp_y(mask) + F(mask) .* dy(mask);
     end
 end
 
@@ -255,9 +205,9 @@ function [Ft_x, Ft_y] = temperature_fluctuations(n, eta, T_coeff, T, rand_dirs_g
 end
 
 % % ------------------------
-% % Residual Force
+% % TODO: Residual Force
+% % Fast local density gradient approximation and then force based on that
 % % ------------------------
-% TODO: Go over this
 
 function [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,Lx, Ly);
     
@@ -309,103 +259,66 @@ function [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,Lx, Ly);
     Fr_y = Fr_y(:);
 end
 
+% % ------------------------
+% % TODO: Contact Force (Fast, same-bin only)
+% % ------------------------
+
 function [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, Lx, Ly)
-% Fast contact repulsion using an exponential cutoff, same-bin pairs only.
-% Particles repel with F = Kc * exp(-d / lambda) * r_hat for d <= r_cut.
-%
-% Tuning (units ~ your domain):
-cell_size = 3.0;   % bin size; choose >= r_cut for speed/coverage
-lambda    = 1.0;   % decay length (how fast force drops with distance)
-r_cut     = 3.0;   % hard cutoff distance (often ~3*lambda)
-Kc        = 2000;  % strength scale
-eps0      = 1e-12; % tiny to avoid 0/0
+    % Fast contact repulsion using an exponential cutoff, same-bin pairs only.
+    % Particles repel with F = Kc * exp(-d / lambda) * r_hat for d <= r_cut.
+    %
+    % Tuning (units ~ your domain):
+    cell_size = 3.0;   % bin size; choose >= r_cut for speed/coverage
+    lambda    = 1.0;   % decay length (how fast force drops with distance)
+    r_cut     = 3.0;   % hard cutoff distance (often ~3*lambda)
+    Kc        = 2000;  % strength scale
+    eps0      = 1e-12; % tiny to avoid 0/0
 
-% ---- grid / binning ----
-Nx = max(1, ceil(Lx / cell_size));
-Ny = max(1, ceil(Ly / cell_size));
+    % ---- grid / binning ----
+    Nx = max(1, ceil(Lx / cell_size));
+    Ny = max(1, ceil(Ly / cell_size));
 
-y0 = min(y_p);
-iy = min(max(floor((y_p - y0) ./ cell_size) + 1, 1), Ny);
-ix = min(max(floor(x_p          ./ cell_size) + 1, 1), Nx);
+    y0 = min(y_p);
+    iy = min(max(floor((y_p - y0) ./ cell_size) + 1, 1), Ny);
+    ix = min(max(floor(x_p          ./ cell_size) + 1, 1), Nx);
 
-bins = accumarray([iy, ix], (1:n).', [Ny, Nx], @(v){v}, {[]});
-Fc_x = zeros(n,1); Fc_y = zeros(n,1);
+    bins = accumarray([iy, ix], (1:n).', [Ny, Nx], @(v){v}, {[]});
+    Fc_x = zeros(n,1); Fc_y = zeros(n,1);
 
-r2_cut = r_cut^2;
+    r2_cut = r_cut^2;
 
-% ---- same-bin pairs only (upper triangle) ----
-for by = 1:Ny
-  for bx = 1:Nx
-    A = bins{by,bx};
-    m = numel(A);
-    if m < 2, continue; end
+    % ---- same-bin pairs only (upper triangle) ----
+    for by = 1:Ny
+        for bx = 1:Nx
+            A = bins{by,bx};
+            m = numel(A);
+            if m < 2, continue; end
 
-    Ax = x_p(A); Ay = y_p(A);
-    dX = Ax - Ax.'; dY = Ay - Ay.';
-    D2 = dX.^2 + dY.^2;
+            Ax = x_p(A); Ay = y_p(A);
+            dX = Ax - Ax.'; dY = Ay - Ay.';
+            D2 = dX.^2 + dY.^2;
 
-    mask = triu(true(m),1) & (D2 <= r2_cut);
-    if ~any(mask,'all'), continue; end
+            mask = triu(true(m),1) & (D2 <= r2_cut);
+            if ~any(mask,'all'), continue; end
 
-    [I,J] = find(mask);
-    dx = Ax(I) - Ax(J); dy = Ay(I) - Ay(J);
-    d  = sqrt(dx.^2 + dy.^2) + eps0;
+            [I,J] = find(mask);
+            dx = Ax(I) - Ax(J); dy = Ay(I) - Ay(J);
+            d  = sqrt(dx.^2 + dy.^2) + eps0;
 
-    % soft exponential repulsion
-    mag = Kc * lambda^2 ./ d.^2;   % scalar per interacting pair
-    fx  = mag .* (dx ./ d);
-    fy  = mag .* (dy ./ d);
+            % soft exponential repulsion
+            mag = Kc * lambda^2 ./ d.^2;   % scalar per interacting pair
+            fx  = mag .* (dx ./ d);
+            fy  = mag .* (dy ./ d);
 
-    % equal & opposite
-    Fc_x(A(I)) = Fc_x(A(I)) + fx;  Fc_y(A(I)) = Fc_y(A(I)) + fy;
-    Fc_x(A(J)) = Fc_x(A(J)) - fx;  Fc_y(A(J)) = Fc_y(A(J)) - fy;
-  end
+            % equal & opposite
+            Fc_x(A(I)) = Fc_x(A(I)) + fx;  Fc_y(A(I)) = Fc_y(A(I)) + fy;
+            Fc_x(A(J)) = Fc_x(A(J)) - fx;  Fc_y(A(J)) = Fc_y(A(J)) - fy;
+        end
+    end
+
+    % column vectors
+    Fc_x = Fc_x(:); Fc_y = Fc_y(:);
 end
-
-% column vectors
-Fc_x = Fc_x(:); Fc_y = Fc_y(:);
-end
-% % Stress-strain relationship to indicate the growth of the filament
-
-% % Stuff here... Need to figure out what states is doing. Does it encode the
-% % position? Or perhaps I can try to squeeze the strain growth into the
-% % dx/dt array which would encode the rate at which the x-position
-% % changes... maybe?
-
-% % Find the maximum and minimum x and y positions
-% xmin_p = min([x_p; x_v]);
-% xmax_p = max([x_p; x_v]);
-% ymin_p = min([y_p; y_v]);
-% ymax_p = max([y_p; y_v]);
-
-% % Find the midpoint positions
-% x_mid = (xmin_p + xmax_p)/2;
-% y_mid = (ymin_p + ymax_p)/2;
-
-% delta_x_pos = xmax_p - xmin_p;      % Compute the x width
-% delta_y_pos = ymax_p - ymin_p;      % Compute the y width
-% Fe = (kC*q^2)/(2*r_Ag)^2;             % Electrostatic force between two silver nanoparticles
-
-% % Add a default strain amount determined by the formation pressure? Start
-% % with 100 Pa, then 10 Pa and then 1000 Pa
-% sigma_xx = (Fapp+Fe)/(2*delta_x_pos^2) + 1000;    % Stress experienced in x direction would be due to field
-% sigma_yy = Fe/(2*delta_y_pos^2) + 1000;      % Stress experienced in y direction would be from nanoparticle interactions
-
-% eps_xx = sigma_xx/E - nu*sigma_yy/E;    % Compute the strain of filament in x
-% eps_yy = sigma_yy/E - nu*sigma_xx/E;    % Compute the strain of filament in y
-
-% x_inc = eps_xx*delta_x_pos;     % Change in the x positions
-% y_inc = eps_yy*delta_y_pos;     % Change in the y positions
-
-% % Update x positions
-% for count=1:n
-%     states(count) = states(count) + x_inc*(states(count)-x_mid)^3;
-% end
-
-% % Update y positions
-% for count=2*n+1:3*n
-%     states(count) = states(count) + y_inc*(states(count)-y_mid)^3;
-% end
 
 % % ------------------------
 % % Get Finishing Array
@@ -418,28 +331,3 @@ function fin_array = finishing_array(x_p, L, fin)
         fin_array = 1;
     end
 end
-
- % % disp(t)
-% if tspan_index <= length(tspan) && t > tspan(tspan_index)
-%     tic;
-%     % % if mod(tspan_index,2) == 0
-%     % I_last = individual_IV_calculator_monte_carlo(x_p, y_p, 200e-6, V, 4.5e-6, 1, 120);
-%     % % end
-%     tspan_index = tspan_index + 1;
-%     disp(num2str(tspan_index))
-%     % disp(['Computed I at t = ', num2str(tspan_index), ' | I = ', num2str(I_last)]);
-%     toc;
-
-%     % % Save computed current and time
-%     % I_saved = [I_saved; I_last];
-%     % t_saved = [t_saved; t];
-    
-%     % compliance = 1;
-%     % total_e = 50;
-%     % res = total_e*V/I_last;
-%     % % V = (compliance * res);
-%     % if I_last > compliance * total_e
-%     %     V = 0.8*(V);
-%     % end
-%     % disp(['Updated Voltage: ', num2str(V)]);
-% end
