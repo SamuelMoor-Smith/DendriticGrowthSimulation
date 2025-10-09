@@ -66,10 +66,13 @@ function dxdt = calculateForces(t, states, params)
     FI_x = interfacial_force(n, x_p, y_p, params.wI, params.RI, params.Lx);
     [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, params.w_pin, params.x_pin, params.y_pin, params.R_pin, params.Lx);
     [Ft_x, Ft_y] = temperature_fluctuations(n, eta, params.T_coeff, T, rand_dirs_global_x, rand_dirs_global_y);
+
+    % In progress 
     [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,params.Lx, params.Ly);
     % [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, params.Lx, params.Ly);
     Fc_x = zeros(n, 1); % Initialize contact forces
     Fc_y = zeros(n, 1); % Initialize contact forcesåå
+    % In progress
 
     % If the particle has reached the end, set the velocity to zero
     fin_array = finishing_array(x_p, params.Lx, params.fin);

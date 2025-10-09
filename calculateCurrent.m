@@ -15,7 +15,8 @@ end
 % curr_indexes = randperm(100, p);
 
 % start with num_e electrons at left electrode
-curr_indexes = n + 1 * ones(num_e, 1);; % left electrode is index n+1
+LEFT_ELECTRODE = n + 1;
+curr_indexes = LEFT_ELECTRODE * ones(num_e, 1);; % left electrode is index n+1
 
 % Get the current positions of the electrons
 currx = zeros(num_e, 1);; % start at x=0';
