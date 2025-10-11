@@ -1,6 +1,6 @@
 # Dendritic Growth Simulation
 
-A MATLAB-based simulator for studying dendritic filament formation in a metal-oxide memristor. The model evolves hundreds of mobile ions across a 2D domain with pinning sites, computes the induced current, and exports an animation illustrating how filaments bridge the electrodes over time.
+A MATLAB-based simulator for studying gold dendritic filament formation in a metal-oxide memristor. The model evolves hundreds of mobile ions across a 2D domain with pinning sites, computes the induced current, and exports an animation illustrating how filaments bridge the electrodes over time.
 
 ## Simulation Overview
 - **Time integration:** `ode45` integrates coupled position/velocity ODEs for each particle plus a bulk temperature state.

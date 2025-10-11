@@ -19,8 +19,8 @@ LEFT_ELECTRODE = n + 1;
 curr_indexes = LEFT_ELECTRODE * ones(num_e, 1);; % left electrode is index n+1
 
 % Get the current positions of the electrons
-currx = zeros(num_e, 1);; % start at x=0';
-curry = nan(num_e, 1);; % start at y = nan' (y doesn't matter at electrode);
+currx = zeros(num_e, 1); % start at x=0';
+curry = nan(num_e, 1); % start at y = nan' (y doesn't matter at electrode);
 
 % in case num_e changes - not happening anymore
 % num_e = length(currx);
