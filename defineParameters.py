@@ -59,6 +59,8 @@ params = { # create a dictionary to hold parameters
     # Applied Electric Field Parameters
     #--------------------------------
 
+    "V" : 1, # applies voltage
+
     #--------------------------------
     #Residual Stress Parameters
     #--------------------------------
@@ -90,6 +92,33 @@ params['R_pin'] = rand(params['m'],1) * 10 # Pinning potential distance
 # Jasons code?
 params["k"] = 420/params['L_x']; # !!! Heat transfer coefficient [W/m^2K] from https://www.spiraxsarco.com/learn-about-steam/steam-engineering-principles-and-heat-transfer/heat-transfer
 
+#applied electric field parameters
+params['alpha'] = rand(params['n'], 1) * 1e5 
+
 #--------------------------------
-#
+# Drag Force Parameters
 #--------------------------------
+
+params['eta'] = 1 # viscosity
+params["Cd"] = 50 # 1.8e4 # Drag Coefficient
+
+#--------------------------------
+# Interfacial Potential Parameters
+#--------------------------------
+
+params['wI'] = 2e4 # Interfacial potential amplitude only with clusters
+params['RI'] = 25 #Interfacial potential distance only with clusters
+
+#--------------------------------
+# Current Calculation Parameters
+#--------------------------------
+params['num_e'] = 50 # Number of electrons to simulate
+params['Rt'] = 1
+params['lambda'] = 2
+params['steps'] = 120
+
+#####################################################################
+##################### RUN DENDRITIC SIMULATION ######################
+#####################################################################
+
+# insert code to run simulation here
