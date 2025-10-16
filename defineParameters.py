@@ -81,8 +81,8 @@ params["electrode_width"] = params["L_x"] / 2 # Width of electrodes on material
 params["electrode_height"] = params["L_y"] # Height of electrodes on material
 
 #pinning parameters
-params['wp_attract']=(-(rand(1,0.5*params['m']))*params['wpa_attract'] - params['wpa_attract']/2) # update the value from a scalar to an array
-params['wp_repulse']=((rand(1,0.5*params['m']))*params['wpa_repulse'] + params['wpa_repulse']/2)
+params['wp_attract']=(-(rand(1,params['m']//2))*params['wpa_attract'] - params['wpa_attract']/2) # update the value from a scalar to an array
+params['wp_repulse']=((rand(1,params['m']//2))*params['wpa_repulse'] + params['wpa_repulse']/2)
 params['w_pin'] = np.concatenate((params['wp_attract'], params['wp_repulse']), axis=None) # Combine attractive and repulsive pinning forces into one array
 params['x_pin'] = rand(params['m'],1) * params['L_x'] # Randomly distribute pinning sites in x-direction
 params['y_pin'] = rand(params['m'],1) * params['L_y'] - 0.5*params['L_y'] # Randomly distribute pinning sites in y-direction
