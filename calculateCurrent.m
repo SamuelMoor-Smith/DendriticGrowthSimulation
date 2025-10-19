@@ -24,6 +24,8 @@ curry = nan(num_e, 1); % start at y = nan' (y doesn't matter at electrode);
 
 % in case num_e changes - not happening anymore
 % num_e = length(currx);
+
+I = 0;
     
 for step = 1:steps
 
@@ -60,7 +62,11 @@ for step = 1:steps
     tot_weights = [dist_weights to_begin to_end];
     
     [curr_indexes,currx,curry]=getNextIndex(tot_weights,x',y',currx,curry,curr_indexes, L);
+
+    crossed = (curr_indexes == n+2); % reached right electrode
+    I = I + sum(crossed);
+    curr_indexes(crossed) = LEFT_ELECTRODE; % reset to left electrode
+    currx(crossed) = 0;
+    curry(crossed) = nan; % y doesn't matter at electrode
     
 end
-
-I = sum(currx==L);

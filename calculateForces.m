@@ -70,6 +70,8 @@ function dxdt = calculateForces(t, states, params)
     % In progress 
     [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,params.Lx, params.Ly);
     % [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, params.Lx, params.Ly);
+    % Fr_x = zeros(n, 1);
+    % Fr_y = zeros(n, 1);
     Fc_x = zeros(n, 1); % Initialize contact forces
     Fc_y = zeros(n, 1); % Initialize contact forcesåå
     % In progress
@@ -212,52 +214,56 @@ end
 % % Fast local density gradient approximation and then force based on that
 % % ------------------------
 
-function [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,Lx, Ly);
-    
-    cell_size = 5; % Size of each grid cell
-    w_resid = 1; % Strength of residual force
+function [Fr_x, Fr_y] = residual_force(n, x_p, y_p, Lx, Ly)
+    % Residual (crowding) force based on smoothed local density gradients.
+    %
+    % Concept: each particle feels a repulsion away from high-density regions,
+    %          similar to crowd diffusion or self-exclusion.
+    %
+    % Parameters:
+    cell_size = 5.0;    % grid resolution (µm or whatever your scale is)
+    R_resid   = 1.5*cell_size; % Gaussian width
+    w_resid   = 100.0;      % strength (like your pinning w)
 
-    % ---- Build grid ----
-    Nx = max(1, ceil(Lx / cell_size));
-    Ny = max(1, ceil(Ly / cell_size));
+    % ------------------------
+    % Grid setup
+    % ------------------------
+    Nx = max(2, ceil(Lx / cell_size));
+    Ny = max(2, ceil(Ly / cell_size));
+    x_edges = linspace(0, Lx, Nx+1);
+    y_edges = linspace(-Ly/2, Ly/2, Ny+1);
+    x_centers = 0.5 * (x_edges(1:end-1) + x_edges(2:end));
+    y_centers = 0.5 * (y_edges(1:end-1) + y_edges(2:end));
 
-    % Shift y to [0, Ly] if needed (keeps bins consistent)
-    y0 = min(y_p);
-    y_shifted = y_p - y0;  % now spans ~[0, Ly]
+    % ------------------------
+    % Count particles per cell (density field)
+    % ------------------------
+    [count, ~, ~, ~, ~] = histcounts2(y_p, x_p, y_edges, x_edges);
 
-    % ---- Bin indices (1-based) ----
-    ix = floor(x_p ./ cell_size) + 1;
-    iy = floor(y_shifted ./ cell_size) + 1;
+    % --- Accumulate forces from all occupied cells (pinning-like loop) ---
+    Fr_x = zeros(n,1);
+    Fr_y = zeros(n,1);
+    R2   = R_resid.^2;
 
-    % Clamp to grid (non-periodic edges)
-    ix = min(max(ix, 1), Nx);
-    iy = min(max(iy, 1), Ny);
+    for iy = 1:Ny
+        for ix = 1:Nx
+            m = count(iy, ix);             % occupancy of cell (iy,ix)
+            if m <= 0, continue; end       % skip empty cells
 
-    % ---- Count particles per cell ----
-    count = accumarray([iy, ix], 1, [Ny, Nx]);  % rows=y, cols=x
+            xc = x_centers(ix);
+            yc = y_centers(iy);
 
-    % Subtract self from own cell to avoid self-force bias
-    lin_idx = sub2ind([Ny, Nx], iy, ix);
-    count(lin_idx) = max(count(lin_idx) - 1, 0);
+            dx = x_p - xc;                 % vector to all particles
+            dy = y_p - yc;
+            d2 = dx.^2 + dy.^2;
 
-    % ---- Neighbour counts (handle zero-gradient boundaries) ----
-    count_left  = [count(:,1),      count(:,1:Nx-1)];
-    count_right = [count(:,2:Nx),   count(:,Nx)];
+            Fmag = (2 * w_resid * m / R2) .* exp(-d2 ./ R2);  % scalar per particle
+            Fr_x = Fr_x + Fmag .* dx;
+            Fr_y = Fr_y + Fmag .* dy;
+        end
+    end
 
-    count_up    = [count(2:Ny, :);  count(Ny, :)];
-    count_down  = [count(1,   :);   count(1:Ny-1, :)];
-
-    % ---- Local density gradients mapped back to particles ----
-    % Fx ~ rho_right - rho_left; Fy ~ rho_up - rho_down
-    rho_left   = count_left(lin_idx);
-    rho_right  = count_right(lin_idx);
-    rho_up     = count_up(lin_idx);
-    rho_down   = count_down(lin_idx);
-
-    Fr_x = w_resid * (rho_left - rho_right);
-    Fr_y = w_resid * (rho_down - rho_up);
-
-    % Ensure column vectors of length n
+    % column vectors
     Fr_x = Fr_x(:);
     Fr_y = Fr_y(:);
 end

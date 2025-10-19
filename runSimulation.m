@@ -21,7 +21,7 @@ function [o1,o2] = runSimulation(params)
     % ------------------------
     % Randomize initial particle positions
     % ------------------------
-    xo = 10.*rand(n,1); 
+    xo = -10.*rand(n,1); 
     yo = electrode_height.*rand(n,1) - 0.5*electrode_height;
 
     % ------------------------
@@ -114,6 +114,8 @@ function [o1,o2] = runSimulation(params)
     % Initialize handle for particle plot
     hParticles = plot(ax1, X_pos(1,1:n), Y_pos(1,1:n), 'b.');
 
+    pinSites = plot(ax1, params.x_pin, params.y_pin, 'rx');
+
     % ------------------------
     % Bottom row: current plot (spans 2 columns)
     % ------------------------
@@ -122,7 +124,7 @@ function [o1,o2] = runSimulation(params)
     xlabel(ax2,'time'); ylabel(ax2,'Current I');   % NEW
     hI = plot(ax2, NaN, NaN, 'LineWidth', 1.5);    % NEW
     xlim(ax2, [t(1) t(end)]);                      % NEW
-    ylim(ax2, [0, params.num_e])
+    % ylim(ax2, [0, params.num_e])
     % y-lims will auto-scale as data arrives
 
     for idx=1:length(t)
