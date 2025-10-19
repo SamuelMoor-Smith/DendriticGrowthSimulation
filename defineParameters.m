@@ -66,8 +66,8 @@ m = params.m; % For convenience
 % Pinning Site Locations and Forces
 % ------------------------
 
-params.wpa_repulse = 5000;
-params.wpa_attract = 5000;
+params.wpa_repulse = 3500;
+params.wpa_attract = 500;
 wp_attract=(-(rand(1,0.5*m)).*params.wpa_attract - params.wpa_attract/2);
 wp_repulse=((rand(1,0.5*m)).*params.wpa_repulse + params.wpa_repulse/2);
 % params.w_pin=rand(m,1)*5000-500;
