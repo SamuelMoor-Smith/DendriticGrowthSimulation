@@ -21,7 +21,7 @@ function [o1,o2] = runSimulation(params)
     % ------------------------
     % Randomize initial particle positions
     % ------------------------
-    xo = -10.*rand(n,1); 
+    xo = -15.*rand(n,1); 
     yo = electrode_height.*rand(n,1) - 0.5*electrode_height;
 
     % ------------------------
@@ -64,7 +64,7 @@ function [o1,o2] = runSimulation(params)
 
     % Set axis limits and labels once
     xlim(ax1, [-electrode_width - 5, Lx+electrode_width + 5]);
-    ylim(ax1, [-electrode_height/2 - 5, electrode_height/2 + 5]);
+    ylim(ax1, [-electrode_height/2 - 20, electrode_height/2 + 20]);
     xlabel(ax1, 'x-position');
     ylabel(ax1, 'y-position');
 
@@ -87,24 +87,41 @@ function [o1,o2] = runSimulation(params)
 
     % Plot static pinning sites
     % plot(ax1, params.x_pin, params.y_pin, 'rx', 'MarkerSize', 6, 'LineWidth', 1.5);
-    w_pin = params.w_pin;
-    R_pin = params.R_pin;
 
     x = linspace(0, Lx, 100);
     y = linspace(-Ly/2, Ly/2, 100);
     [X, Y] = meshgrid(x, y);
     % U = (w_pin / 2) * (sin((2 * pi * (X + Y)) / R_pin) + cos((2 * pi * (X - Y)) / R_pin));
-    U = zeros(size(X));
-    for k = 1:numel(params.w_pin)
-        dx = X - params.x_pin(k);
-        dy = Y - params.y_pin(k);
-        U = U + params.w_pin(k) .* exp(-(dx.^2 + dy.^2) / (params.R_pin(k)^2));
+    % U = zeros(size(X));
+    % for k = 1:numel(params.w_pin)
+    %     % disp(params.R_pin(k))
+    %     dx = X - params.x_pin(k);
+    %     dy = Y - params.y_pin(k);
+    %     U = U + params.w_pin(k) .* exp(-(dx.^2 + dy.^2) / (params.R_pin(k)^2));
+    % end
+    % --- Sinusoidal background (match your pinning_force hard-codes) ---
+    Rx = 5;  Ry = 5;                             % periods
+    pin_amp = params.w_pin2;                               % match your defect_force call
+
+    U_sin = (pin_amp/2) * (exp(-abs(X-Lx/2)/10)) .* (sin(2*pi*(X+Y)/Rx) + sin(2*pi*(X-Y)/Rx)); % * exp(-(X - Lx/2).^2 / 25^2) ;
+
+    % --- Gaussian defects (if provided in params.*) ---
+    U_def = zeros(size(X));
+    if isfield(params,'w_pin') && ~isempty(params.w_pin)
+        for k = 1:numel(params.w_pin)
+            dx = X - params.x_pin(k);
+            dy = Y - params.y_pin(k);
+            U_def = U_def + params.w_pin(k) .* exp(-(dx.^2 + dy.^2) / (params.R_pin(k)^2));
+        end
     end
+
+    % Total visualised potential
+    U = U_sin + U_def;
      % Transparent surface at z = 0
     hSurf = surf(ax1, X, Y, zeros(size(U)), U, ...
         'EdgeColor', 'none', 'FaceAlpha', 0.3);  % Apply transparency
 
-    colormap(ax1, 'pink')
+    colormap(ax1, pink)
 
     % Add a colorbar to show U values
     cb = colorbar(ax1);
@@ -114,7 +131,7 @@ function [o1,o2] = runSimulation(params)
     % Initialize handle for particle plot
     hParticles = plot(ax1, X_pos(1,1:n), Y_pos(1,1:n), 'b.');
 
-    pinSites = plot(ax1, params.x_pin, params.y_pin, 'rx');
+    % pinSites = plot(ax1, params.x_pin, params.y_pin, 'rx');
 
     % ------------------------
     % Bottom row: current plot (spans 2 columns)

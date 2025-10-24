@@ -64,32 +64,34 @@ function dxdt = calculateForces(t, states, params)
     Fa_x = applied_force(n, x_p, params.alpha, V, params.Lx);
     [Fd_x, Fd_y] = drag_force(n, x_v, y_v, params.eta, params.Cd);
     FI_x = interfacial_force(n, x_p, y_p, params.wI, params.RI, params.Lx);
-    [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, params.w_pin, params.x_pin, params.y_pin, params.R_pin, params.Lx);
+    % FB_y = boundary_force_penalty(y_p, y_v, params.Ly);
+    [Fp_x, Fp_y] = defect_force(n, x_p, y_p, params.w_pin, params.x_pin, params.y_pin, params.R_pin, params.Lx);
+    % [Fpin_x, Fpin_y] = pinning_force(n, x_p, y_p, params.Lx, params.w_pin2);
     [Ft_x, Ft_y] = temperature_fluctuations(n, eta, params.T_coeff, T, rand_dirs_global_x, rand_dirs_global_y);
-
+    % Ft_x = zeros(n, 1);
+    % Ft_y = zeros(n, 1);
     % In progress 
     [Fr_x, Fr_y] = residual_force(n, x_p, y_p ,params.Lx, params.Ly);
     % [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, params.Lx, params.Ly);
-    % Fr_x = zeros(n, 1);
-    % Fr_y = zeros(n, 1);
+    % Fd_x = zeros(n, 1);
+    % Fd_y = zeros(n, 1);
     Fc_x = zeros(n, 1); % Initialize contact forces
     Fc_y = zeros(n, 1); % Initialize contact forcesåå
     % In progress
 
-    % If the particle has reached the end, set the velocity to zero
-    fin_array = finishing_array(x_p, params.Lx, params.fin);
 
     forces_x = Fa_x + Fd_x + FI_x + Fp_x + Ft_x + Fr_x + Fc_x; % Total force in x direction
     forces_y = 0    + Fd_y + 0    + Fp_y + Ft_y + Fr_y + Fc_y; % Total force in y direction
 
+    dxdt = zeros(4*n+1, 1);
     %solve force balance equation in x direction
-    dxdt(1:n) = states(n+1:2*n) .* fin_array;
-    dxdt(n+1:2*n) = forces_x./eta .* fin_array;
+    dxdt(1:n) = states(n+1:2*n);
+    dxdt(n+1:2*n) = forces_x./eta;
 
     %solve force balance equation in y direction
-    dxdt(2*n+1:3*n) = states(3*n+1:4*n) .* fin_array;
-    dxdt(3*n+1:4*n) = forces_y./eta .* fin_array;
-    
+    dxdt(2*n+1:3*n) = states(3*n+1:4*n);
+    dxdt(3*n+1:4*n) = forces_y./eta;
+
     %temperature evolution
     dxdt((4*n)+1) = (params.CT * params.Q) - params.k * (T - params.To);
 
@@ -166,7 +168,7 @@ function [FI_x] = interfacial_force(n, x_p, y_p, wI, RI, Lx)
     FI_x = zeros(n, 1);
 
     % Logical index of particles within [0, Lx]
-    inside = (x_p > 0) & (x_p < Lx);
+    inside = (x_p > 0); % & (x_p < Lx);
 
     % Compute force only for those particles
     FI_x(inside) = -(2 * wI / RI^2) * ( ...
@@ -175,11 +177,33 @@ function [FI_x] = interfacial_force(n, x_p, y_p, wI, RI, Lx)
     ); 
 end
 
+% function FB_y = boundary_force_penalty(y_p, y_v, Ly)
+%     % Force units: same as all other forces
+%     % k_wall: stiffness; c_wall: extra damping near/over the wall
+%     k_wall = 1e4;
+%     c_wall = 1e3;
+
+%     % distance beyond the walls (penetration, >=0 if outside)
+%     pen_top    = max(0,  y_p -  Ly/2);
+%     pen_bottom = max(0, -Ly/2 - y_p);
+
+%     % spring forces (push back inwards)
+%     F_top    = -k_wall * pen_top;        % negative (down)
+%     F_bottom =  k_wall * pen_bottom;     % positive (up)
+
+%     % damping only when outside
+%     damp = zeros(size(y_p));
+%     outside = (pen_top > 0) | (pen_bottom > 0);
+%     damp(outside) = -c_wall * y_v(outside);
+
+%     FB_y = F_top + F_bottom + damp;
+% end
+
 % % ------------------------
-% % Pinning Force
+% % Pinning Force (now defect force is old pinning force)
 % % ------------------------
 
-function [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, w_pin, x_pin, y_pin, R_pin, Lx)
+function [Fp_x, Fp_y] = defect_force(n, x_p, y_p, w_pin, x_pin, y_pin, R_pin, Lx)
     assert(isvector(x_p) && isvector(y_p), 'x_p and y_p must be vectors');
     assert(length(x_p) == length(y_p), 'x_p and y_p must be the same length');
     assert(length(x_p) == n, 'x_p must have length n');
@@ -198,6 +222,35 @@ function [Fp_x, Fp_y] = pinning_force(n, x_p, y_p, w_pin, x_pin, y_pin, R_pin, L
         Fp_y = Fp_y + (F.*dy);
     end
 end
+
+% function [Fpin_x, Fpin_y] = pinning_force(n, x_p, y_p, Lx, pin_amp)
+
+%     Rx = 5;   % period in x-direction
+%     % Ry = 5;   % period in y-direction
+%     Rt = 25;  % Gaussian envelope width
+
+%     inside = (x_p > 0) & (x_p < Lx);
+
+%     Fpin_x = zeros(n,1);
+%     Fpin_y = zeros(n,1);
+
+%     h_x = exp(-((x_p(inside) - Lx/2).^2) / Rt);
+
+%     x_plus_y = x_p(inside) + y_p(inside);
+%     x_minus_y = x_p(inside) - y_p(inside);
+%     g_x_y = sin(2*pi*x_plus_y/Rx) + sin(2*pi*x_minus_y/Rx);
+%     dx_g_x_y = cos(2*pi*x_plus_y/Rx) + cos(2*pi*x_minus_y/Rx);
+%     dy_g_x_y = cos(2*pi*x_plus_y/Rx) - cos(2*pi*x_minus_y/Rx);
+
+%     x_sign = sign(x_p(inside) - Lx/2);
+
+%     x_mag = (pin_amp/2)*(2*pi/Rx)*h_x;
+%     y_mag = (pin_amp/2)*(2*pi/Rx)*h_x;
+
+%     Fpin_x(inside) = x_mag .* ( (-1/Rt * x_sign .* g_x_y) + dx_g_x_y );
+%     Fpin_y(inside) = y_mag .* dy_g_x_y;
+% end
+
 
 % % ------------------------
 % % Temperature Fluctuations
@@ -327,16 +380,4 @@ function [Fc_x, Fc_y] = contact_force_intrabins(n, x_p, y_p, Lx, Ly)
 
     % column vectors
     Fc_x = Fc_x(:); Fc_y = Fc_y(:);
-end
-
-% % ------------------------
-% % Get Finishing Array
-% % ------------------------
-function fin_array = finishing_array(x_p, L, fin)
-    % Check if the particles have reached the end
-    if fin == 1
-        fin_array = x_p < 2*L - 5e-6;
-    else 
-        fin_array = 1;
-    end
 end

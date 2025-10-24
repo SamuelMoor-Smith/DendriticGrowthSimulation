@@ -17,13 +17,12 @@ rng(2)
 % Basic Simulation Parameters
 % ------------------------
 params.i = 1; % Simulation Number
-params.fin = 1; % If 1, stops movement of particles once they hit the other end
 
 % ------------------------
 % Well-understood Physical Constants
 % ------------------------
 % params.kB = 1.38e-11; % !!! Boltzmann constant [J/K]
-params.T_coeff = 3000; % !!! Temperature coefficient [K^-1] -- this is a guess, not sure what to use here
+params.T_coeff = 10000; % !!! Temperature coefficient [K^-1] -- this is a guess, not sure what to use here
 
 % ------------------------
 % Simulation Length and Particle Count
@@ -32,7 +31,8 @@ params.n = 500; % Number of particles
 n = params.n; % For convenience
 
 simulation_length = 6; % in seconds
-params.tspan=linspace(0,simulation_length,2000);
+simulation_steps = 2000;
+params.tspan=linspace(0,simulation_length,simulation_steps);
 
 % ------------------------
 % Initial position box and material size
@@ -59,7 +59,7 @@ params.CT = 0.24*5e-9; % !!! Heat capacity = specific heat capacity*mass [J/K] h
 % ------------------------
 % Pinning Force Parameters
 % ------------------------
-params.m = 400; % Number of sites
+params.m = 250; % Number of sites
 m = params.m; % For convenience
 
 % ------------------------
@@ -67,13 +67,14 @@ m = params.m; % For convenience
 % ------------------------
 
 params.wpa_repulse = 3500;
-params.wpa_attract = 500;
-wp_attract=(-(rand(1,0.5*m)).*params.wpa_attract - params.wpa_attract/2);
-wp_repulse=((rand(1,0.5*m)).*params.wpa_repulse + params.wpa_repulse/2);
+% params.wpa_attract = 500;
+% wp_attract=(-(rand(1,0.5*m)).*params.wpa_attract - params.wpa_attract/2);
+wp_repulse=((rand(1,m)).*params.wpa_repulse + 0.25*params.wpa_repulse);
 % params.w_pin=rand(m,1)*5000-500;
-params.w_pin=[wp_attract wp_repulse];
+params.w_pin= wp_repulse;% [wp_attract wp_repulse];
 params.x_pin=rand(m,1).*0.8*Lx + 0.1*Lx;
-params.y_pin=(rand(m,1).*Ly)-0.5*Ly;
+% params.y_pin=(rand(m,1).*params.electrode_height)-0.5*params.electrode_height;
+params.y_pin=rand(m,1).*0.8*Ly - 0.4*Ly;
 % params.x_pin_raw = linspace(0, Lx, 16);
 % params.y_pin_raw = linspace(-Ly/2, Ly/2, 16);
 
@@ -88,13 +89,15 @@ params.y_pin=(rand(m,1).*Ly)-0.5*Ly;
 
 
 % params.w_pin = 100; % Pinning potential amplitude
-params.R_pin = rand(m,1).*10; % 5; % Pinning potential distance
+params.R_pin = rand(m,1).*10+1; % 5; % Pinning potential distance
+
+params.w_pin2 = 2000;
 
 % ------------------------
 % Applied Electric Field Parameters
 % ------------------------
 params.V = 1; % Applied Voltage
-params.alpha = rand(n,1).*1e5;
+params.alpha = rand(n,1).*1e5+0.2e5;
 
 % ------------------------
 % Drag Force Parameters
@@ -123,8 +126,8 @@ params.r_Ag=126e-12; % Silver ion radius
 % ------------------------
 params.num_e = 100; % Number of electrons to simulate
 params.Rt = 1;                         
-params.lambda = 4;
-params.steps = 120;
+params.lambda = 1;
+params.steps = 250;
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 

@@ -58,6 +58,7 @@ for step = 1:steps
     to_end(curr_indexes==n+2) = 1000; % if already at end, always stay there
     
     to_begin = zeros(num_e,1);
+    to_begin(curr_indexes==n+1) = Rt; % if at begin, set stay rate to Rt
 
     tot_weights = [dist_weights to_begin to_end];
     
