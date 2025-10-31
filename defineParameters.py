@@ -116,9 +116,3 @@ params['num_e'] = 50 # Number of electrons to simulate
 params['Rt'] = 1
 params['lambda'] = 2
 params['steps'] = 120
-
-#####################################################################
-##################### RUN DENDRITIC SIMULATION ######################
-#####################################################################
-
-# insert code to run simulation here
