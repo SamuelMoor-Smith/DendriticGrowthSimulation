@@ -30,7 +30,6 @@ params = { # create a dictionary to hold parameters
     
     "n" : 500, # Number of particles
     "simulation_length" : 6, # in seconds
-    'dt' : 1e-6, # Time step for simulation
 
     #--------------------------------
     # Initial position box and material size
@@ -74,7 +73,8 @@ params = { # create a dictionary to hold parameters
 # add to params
 
 # simulation parameters
-params["tspan"] = np.arange(0, params["simulation_length"], params["dt"]), # Time span for simulation output
+params['dt'] = params["simulation_length"]/2000  # Time step for simulation
+params["tspan"] = np.arange(0, params["simulation_length"], params["dt"]) # Time span for simulation output
 
 # material and electrode dimensions
 params["electrode_width"] = params["L_x"] / 2 # Width of electrodes on material

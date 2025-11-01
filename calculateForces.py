@@ -1,6 +1,6 @@
 import numpy as np
 from defineParameters import params
-from calculateCurrent import calculateCurrent
+from calculateCurrent import calculate_current
 
 # Global simulation state
 tindex = 0
@@ -42,7 +42,7 @@ def calculate_forces(t, states, params):
         rand_dirs_global_y = 2 * np.random.randint(0, 2, n) - 1
 
         if tindex % 2 == 0:
-            I_last = calculateCurrent(
+            I_last = calculate_current(
                 x_p, y_p, params["L_x"], V,
                 params["lambda"], params["Rt"], params["steps"], params["num_e"]
             )
@@ -161,7 +161,7 @@ def residual_force(n, x_p, y_p, Lx, Ly):
     for i in range(n):
         count[iy[i], ix[i]] += 1
 
-    count[tuple((iy, ix))] = np.maximum(count[tuple((iy, ix))] - 1, 0)
+    count[iy, ix] = np.maximum(count[iy, ix] - 1, 0)
 
     def shift(arr, dx, dy):
         return np.roll(np.roll(arr, dy, axis=0), dx, axis=1)
