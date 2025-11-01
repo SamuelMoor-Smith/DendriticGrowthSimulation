@@ -12,7 +12,7 @@ rand_dirs_global_x, rand_dirs_global_y = None, None
 def calculate_forces(t, states, params):
     """
     Python translation of MATLAB calculateForces.m
-    Computes the time derivative dxdt for all particle states.
+    Computes the time derivative dx/dt for all particle states.
     """
     global tindex, V, I_saved, t_saved, I_last
     global rand_dirs_global_x, rand_dirs_global_y
@@ -32,10 +32,10 @@ def calculate_forces(t, states, params):
     x_v = states[n:2 * n]
     y_p = states[2 * n:3 * n]
     y_v = states[3 * n:4 * n]
-    T = states[4 * n]
+    T = states[4 * n] # temperature
 
     # ------------------------
-    # Compute current occasionally
+    # Compute current at intervals
     # ------------------------
     if tindex < len(params["tspan"]) and t > params["tspan"][tindex]:
         rand_dirs_global_x = 2 * np.random.randint(0, 2, n) - 1
@@ -49,7 +49,7 @@ def calculate_forces(t, states, params):
 
         tindex += 1
 
-        if tindex > 1000 and V != 0:
+        if tindex > 1000 and V != 0: # not sure what this does
             V = 0
             print("Voltage set to zero after 1000 iterations")
 
@@ -76,6 +76,7 @@ def calculate_forces(t, states, params):
     Fc_x = np.zeros(n)
     Fc_y = np.zeros(n)
 
+    # If the particle has reached the end, set the velocity to zero
     fin_array = finishing_array(x_p, params["L_x"], params["fin"])
 
     # Total forces
@@ -85,12 +86,14 @@ def calculate_forces(t, states, params):
     # ------------------------
     # Solve for dx/dt
     # ------------------------
+    # evolution in x direction
     dxdt = np.zeros(4 * n + 1)
     dxdt[0:n] = x_v * fin_array
     dxdt[n:2 * n] = (forces_x / eta) * fin_array
+    #evolution in y direction
     dxdt[2 * n:3 * n] = y_v * fin_array
     dxdt[3 * n:4 * n] = (forces_y / eta) * fin_array
-    dxdt[4 * n] = (params["CT"] * params["Q"]) - params["k"] * (T - params["T_0"])
+    dxdt[4 * n] = (params["CT"] * params["Q"]) - params["k"] * (T - params["T_0"]) #temperature evolution
 
     return dxdt
 
@@ -106,10 +109,14 @@ def distances(x1, x2, y1, y2):
     return d, dx, dy
 
 
-def applied_force(n, x_p, alpha, V, Lx):
+def applied_force(n, x_p, alpha, V, Lx): # (From Electric Field)
     Fa_x = np.zeros(n)
+    # Logical index of particles within [0, Lx]
     inside = (x_p >= 0) & (x_p <= Lx)
-    Fa_x[inside] = alpha[inside].flatten() * V / (12 * Lx)
+    Fa_x[inside] = alpha[inside] * V / (1/2 * Lx)
+
+    if not (np.all(Fa_x == 0) or np.any(V > 0)): # I don't really know why this is here, but I'm sure Sam put it in for good reason
+        raise AssertionError("Applied force should be zero if voltage is zero")
     return Fa_x
 
 
@@ -121,7 +128,8 @@ def drag_force(n, x_v, y_v, eta, Cd):
 
 def interfacial_force(n, x_p, y_p, wI, RI, Lx):
     FI_x = np.zeros(n)
-    inside = (x_p >= 0) & (x_p <= Lx)
+    # Logical index of particles within [0, Lx]
+    inside = (x_p > 0) & (x_p < Lx) # interestingly 'and" does not work but '&' does
     FI_x[inside] = -(2 * wI * RI ** 2) * (
         x_p[inside] * np.exp(-(x_p[inside] ** 2) / RI ** 2)
         + (x_p[inside] - Lx) * np.exp(-((x_p[inside] - Lx) ** 2) / RI ** 2)
@@ -146,19 +154,25 @@ def temperature_fluctuations(n, eta, T_coeff, T, rand_x, rand_y):
     Ft_y = rand_y * noise_scale
     return Ft_x, Ft_y
 
+# # ------------------------
+# # TODO: Residual Force
+# # Fast local density gradient approximation and then force based on that
+# # ------------------------
 
 def residual_force(n, x_p, y_p, Lx, Ly):
-    cell_size = 5.0
-    w_resid = 1.0
+    cell_size = 5.0 #Size of each grid cell
+    w_resid = 1.0 #Strength of residual force
     Nx = max(1, int(np.ceil(Lx / cell_size)))
     Ny = max(1, int(np.ceil(Ly / cell_size)))
 
-    y_shifted = y_p - np.min(y_p)
-    ix = np.clip(np.floor(x_p / cell_size).astype(int), 0, Nx - 1)
-    iy = np.clip(np.floor(y_shifted / cell_size).astype(int), 0, Ny - 1)
+    # Shift y to [0, Ly] if needed (keeps bins consistent)
+    y_shifted = y_p - np.min(y_p) # now spans ~[0, Ly]
+    # ---- Bin indices (1-based) ----
+    ix = np.clip(np.floor(x_p / cell_size).astype(int), 0, Nx)
+    iy = np.clip(np.floor(y_shifted / cell_size).astype(int), 0, Ny)
 
     count = np.zeros((Ny, Nx))
-    for i in range(n):
+    for i in range(n): # check later if results are still off
         count[iy[i], ix[i]] += 1
 
     count[iy, ix] = np.maximum(count[iy, ix] - 1, 0)

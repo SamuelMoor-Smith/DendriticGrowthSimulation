@@ -93,7 +93,7 @@ params['R_pin'] = rand(params['m'],1) * 10 # Pinning potential distance
 params["k"] = 420/params['L_x']; # !!! Heat transfer coefficient [W/m^2K] from https://www.spiraxsarco.com/learn-about-steam/steam-engineering-principles-and-heat-transfer/heat-transfer
 
 #applied electric field parameters
-params['alpha'] = rand(params['n'], 1) * 1e5 
+params['alpha'] = rand(params['n']) * 1e5 
 
 #--------------------------------
 # Drag Force Parameters
