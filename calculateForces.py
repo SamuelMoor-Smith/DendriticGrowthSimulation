@@ -29,10 +29,10 @@ def calculate_forces(t, states, params):
     # Unpack state variables
     # ------------------------
     x_p = states[0:n]
-    x_v = states[n:2 * n]
-    y_p = states[2 * n:3 * n]
-    y_v = states[3 * n:4 * n]
-    T = states[4 * n] # temperature
+    x_v = states[n-1:(2*n)]
+    y_p = states[(2*n - 1):(3*n)]
+    y_v = states[(3*n - 1):(4*n)]
+    T = states[4*n] # temperature
 
     # ------------------------
     # Compute current at intervals
