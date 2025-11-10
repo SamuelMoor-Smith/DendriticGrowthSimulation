@@ -71,28 +71,29 @@ def calculate_forces(t, states, params):
     Ft_x, Ft_y = temperature_fluctuations(
         n, eta, params["T_coeff"], T, rand_dirs_global_x, rand_dirs_global_y
     )
+    
     Fr_x, Fr_y = residual_force(n, x_p, y_p, params["L_x"], params["L_y"])
 
-    Fc_x = np.zeros(n)
+    Fc_x = np.zeros(n) # initialize the contact forces
     Fc_y = np.zeros(n)
 
     # If the particle has reached the end, set the velocity to zero
     fin_array = finishing_array(x_p, params["L_x"], params["fin"])
 
     # Total forces
-    forces_x = Fa_x + Fd_x + FI_x + Fp_x + Ft_x + Fr_x + Fc_x
-    forces_y = Fd_y + Fp_y + Ft_y + Fr_y + Fc_y
+    forces_x = Fa_x + Fd_x + FI_x + Fp_x + Ft_x + Fr_x + Fc_x # resultant force in the x direction
+    forces_y = 0    + Fd_y + 0    + Fp_y + Ft_y + Fr_y + Fc_y # resultant force in the y direction
 
     # ------------------------
     # Solve for dx/dt
     # ------------------------
     # evolution in x direction
-    dxdt = np.zeros(4 * n + 1)
+    dxdt = np.zeros(4 * n + 1) # initialize the array of states vector derivatives (x here is not the x-direction, but the entire state vector)
     dxdt[0:n] = x_v * fin_array
-    dxdt[n:2 * n] = (forces_x / eta) * fin_array
+    dxdt[n:(2*n)] = (forces_x / eta) * fin_array
     #evolution in y direction
-    dxdt[2 * n:3 * n] = y_v * fin_array
-    dxdt[3 * n:4 * n] = (forces_y / eta) * fin_array
+    dxdt[(2*n):(3*n)] = y_v * fin_array
+    dxdt[(3*n):(4*n)] = (forces_y / eta) * fin_array
     dxdt[4 * n] = (params["CT"] * params["Q"]) - params["k"] * (T - params["T_0"]) #temperature evolution
 
     return dxdt
