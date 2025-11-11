@@ -9,6 +9,7 @@ V = params["V"]
 I_saved, t_saved, I_last = [], [], 0
 rand_dirs_global_x, rand_dirs_global_y = None, None
 
+integrable_calcualte_forces = lambda t,x: calculate_forces(t,x,params) # this function only takes t and x so it can be used by an integrator
 
 def calculate_forces(t, states, params):
     """
@@ -155,15 +156,39 @@ def interfacial_force(n, x_p, y_p, wI, RI, Lx):
     return FI_x
 
 
+import numpy as np
+
 def pinning_force(n, x_p, y_p, w_pin, x_pin, y_pin, R_pin, Lx):
+    """
+    Vectorized pinning-force computation.
+    Parameters follow MATLAB mapping exactly.
+    """
+    
+    # Initialize force to zero
     Fp_x = np.zeros(n)
     Fp_y = np.zeros(n)
+
+    # Loop per pinning site (small number, so OK)
     for i in range(len(w_pin)):
-        d, dx, dy = distances(x_p, x_pin[i], y_p, y_pin[i])
-        F = (2 * w_pin[i] * R_pin[i] ** 2) * np.exp(-(d ** 2) / R_pin[i] ** 2)
+        # vector: particle-to-pin deltas
+        dx = x_pin[i] - x_p
+        dy = y_pin[i] - y_p
+
+        # distances
+        d = np.sqrt(dx*dx + dy*dy)
+
+        # Avoid division by zero (particles exactly at pin location)
+        #d_safe = np.where(d == 0, 1e-30, d)
+
+        # Gaussian force magnitude
+        F = (2 * w_pin[i] / (R_pin[i]**2)) * np.exp(-(d**2)/(R_pin[i]**2))
+
+        # Direction components (unit vector * magn.)
         Fp_x += F * dx
         Fp_y += F * dy
+
     return Fp_x, Fp_y
+
 
 
 def temperature_fluctuations(n, eta, T_coeff, T, rand_x, rand_y):

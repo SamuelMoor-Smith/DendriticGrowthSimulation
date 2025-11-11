@@ -16,7 +16,8 @@ params = { # create a dictionary to hold parameters
     # Integration method
     #--------------------------------
 
-    "BS" : False, # if True, uses custom bulirsch-stoer algorithm, if False it uses scipy.integrate.solve_ivp()
+    "BS" : True, # if True, uses custom bulirsch-stoer algorithm, if False it uses scipy.integrate.solve_ivp()
+    'BS_error_per_unit_time': 1e-3,
     "scipy_tag" : "RK45", # should be a string for the method argument of scipy.integrate.solve_ivp()
 
     #--------------------------------
