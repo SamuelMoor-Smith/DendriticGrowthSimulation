@@ -6,10 +6,19 @@ Purpose: Define Parameters and Setup Simulation for Gold Memristor Simulation
 '''
 
 import numpy as np
-from numpy.random import rand
+from numpy.random import rand, seed
 from scipy.constants import Boltzmann, elementary_charge
 
+seed(10) # for consistant testing; may comment out for actual runs
+
 params = { # create a dictionary to hold parameters
+    #--------------------------------
+    # Integration method
+    #--------------------------------
+
+    "BS" : False, # if True, uses custom bulirsch-stoer algorithm, if False it uses scipy.integrate.solve_ivp()
+    "scipy_tag" : "RK45", # should be a string for the method argument of scipy.integrate.solve_ivp()
+
     #--------------------------------
     # Basic Simulation Parameters
     #--------------------------------

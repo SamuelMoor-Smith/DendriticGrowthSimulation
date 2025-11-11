@@ -1,10 +1,11 @@
 import numpy as np
 from defineParameters import params
 from calculateCurrent import calculate_current
+from time import sleep # for debugging
 
 # Global simulation state
 tindex = 0
-V = 0
+V = params["V"]
 I_saved, t_saved, I_last = [], [], 0
 rand_dirs_global_x, rand_dirs_global_y = None, None
 
@@ -83,7 +84,7 @@ def calculate_forces(t, states, params):
     # Total forces
     forces_x = Fa_x + Fd_x + FI_x + Fp_x + Ft_x + Fr_x + Fc_x # resultant force in the x direction
     forces_y = 0    + Fd_y + 0    + Fp_y + Ft_y + Fr_y + Fc_y # resultant force in the y direction
-
+    
     # ------------------------
     # Solve for dx/dt
     # ------------------------
@@ -95,7 +96,8 @@ def calculate_forces(t, states, params):
     dxdt[(2*n):(3*n)] = y_v * fin_array
     dxdt[(3*n):(4*n)] = (forces_y / eta) * fin_array
     dxdt[4 * n] = (params["CT"] * params["Q"]) - params["k"] * (T - params["T_0"]) #temperature evolution
-
+    #print(dxdt[0])
+    #sleep(0.5)
     return dxdt
 
 
@@ -111,30 +113,45 @@ def distances(x1, x2, y1, y2):
 
 
 def applied_force(n, x_p, alpha, V, Lx): # (From Electric Field)
+    # Initialize force to zero
     Fa_x = np.zeros(n)
-    # Logical index of particles within [0, Lx]
-    inside = (x_p >= 0) & (x_p <= Lx)
-    Fa_x[inside] = alpha[inside] * V / (1/2 * Lx)
 
-    if not (np.all(Fa_x == 0) or np.any(V > 0)): # I don't really know why this is here, but I'm sure Sam put it in for good reason
-        raise AssertionError("Applied force should be zero if voltage is zero")
+    # Logical index of particles inside domain
+    inside = (x_p < Lx)
+
+    # Apply scaling only to particles within [0,Lx]
+    Fa_x[inside] = alpha[inside] * V / ((0.5) * Lx)
+
     return Fa_x
 
 
 def drag_force(n, x_v, y_v, eta, Cd):
     Fd_x = -eta * Cd * x_v
     Fd_y = -eta * Cd * y_v
+
     return Fd_x, Fd_y
 
 
 def interfacial_force(n, x_p, y_p, wI, RI, Lx):
+    """
+    Compute interfacial force acting in the x-direction.
+    """
+    # Initialize force array
     FI_x = np.zeros(n)
-    # Logical index of particles within [0, Lx]
-    inside = (x_p > 0) & (x_p < Lx) # interestingly 'and" does not work but '&' does
-    FI_x[inside] = -(2 * wI * RI ** 2) * (
-        x_p[inside] * np.exp(-(x_p[inside] ** 2) / RI ** 2)
-        + (x_p[inside] - Lx) * np.exp(-((x_p[inside] - Lx) ** 2) / RI ** 2)
-    )
+
+    # Logical index of particles inside [0, Lx]
+    inside = (x_p > 0) & (x_p < Lx)
+
+    # Apply force only for those particles
+    term1 = x_p[inside] * np.exp(-(x_p[inside]**2) / RI**2)
+    term2 = (x_p[inside] - Lx) * np.exp(-((x_p[inside] - Lx)**2) / RI**2)
+
+    FI_x[inside] = -(2 * wI / RI**2) * (term1 + term2)
+
+    # Debug print (optional)
+    #print(FI_x[0])
+    #sleep(0.5)
+
     return FI_x
 
 
@@ -173,32 +190,52 @@ def residual_force(n, x_p, y_p, Lx, Ly):
     iy = np.clip(np.floor(y_shifted / cell_size).astype(int), 0, Ny-1)
 
     count = np.zeros((Ny, Nx))
-    for i in range(n): # check later if results are still off
-        count[iy[i], ix[i]] += 1
+    np.add.at(count, (iy, ix), 1) # should be the analog of the accumarray MATLAB function
 
-    count[iy, ix] = np.maximum(count[iy, ix] - 1, 0)
+    lin_idx = iy * Nx + ix
+    count.flat[lin_idx] = np.maximum(count.flat[lin_idx] - 1, 0)
 
     def shift(arr, dx, dy):
         return np.roll(np.roll(arr, dy, axis=0), dx, axis=1)
 
-    count_left = np.pad(count[:, :Nx - 1], ((0, 0), (1, 0)), mode="edge")
+    # Left neighbor: shift right, duplicate leftmost column
+    count_left = np.hstack((count[:, [0]], count[:, :-1]))
+
+    # Right neighbor: shift left, duplicate rightmost column
+    count_right = np.hstack((count[:, 1:], count[:, [-1]]))
+
+    # Up neighbor: shift down, duplicate last row
+    count_up = np.vstack((count[1:], count[[-1], :]))
+
+    # Down neighbor: shift up, duplicate first row
+    count_down = np.vstack((count[[0], :], count[:-1]))
+    """count_left = np.pad(count[:, :Nx - 1], ((0, 0), (1, 0)), mode="edge")
     count_right = np.pad(count[:, 1:], ((0, 0), (0, 1)), mode="edge")
     count_up = np.pad(count[1:, :], ((0, 1), (0, 0)), mode="edge")
-    count_down = np.pad(count[:-1, :], ((1, 0), (0, 0)), mode="edge")
+    count_down = np.pad(count[:-1, :], ((1, 0), (0, 0)), mode="edge")"""
 
-    lin_idx = (iy, ix)
-    rho_left = count_left[lin_idx]
-    rho_right = count_right[lin_idx]
-    rho_up = count_up[lin_idx]
-    rho_down = count_down[lin_idx]
+    rho_left  = count_left.flat[lin_idx]
+    rho_right = count_right.flat[lin_idx]
+    rho_up    = count_up.flat[lin_idx]
+    rho_down  = count_down.flat[lin_idx]
 
     Fr_x = w_resid * (rho_left - rho_right)
     Fr_y = w_resid * (rho_down - rho_up)
     return Fr_x, Fr_y
 
 
-def finishing_array(x_p, L, fin):
+"""def finishing_array(x_p, L, fin):
     if fin == 1:
         return np.where(x_p >= 2 * L - 5e-6, 0, 1)
     else:
-        return np.ones_like(x_p)
+        return np.ones_like(x_p)"""
+
+def finishing_array(x_p, L, fin):
+    """
+    Check if particles have reached the end.
+    Returns a boolean array (or True if fin == 0).
+    """
+    if fin == 1:
+        return x_p < (2 * L - 5e-6)
+    else:
+        return True

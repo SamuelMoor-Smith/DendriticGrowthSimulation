@@ -57,19 +57,22 @@ def run_simulation(params):
     tindex = 1
     V = params["V"]
 
-    sol = solve_ivp(
-        fun=lambda t, y: calculate_forces(t, y, params),
-        t_span=(tspan[0], tspan[-1]),
-        y0=initial,
-        t_eval=tspan, # recall that tspan is an np.arange array - gives us the integral at evenly spaced intervals of dt. Though the solver may take smaller steps to reduce error.
-        method="RK45",
-        vectorized=False,
-        rtol=1e-6,
-        atol=1e-9,
-    )
+    if not params["BS"]: #use scipy to integrate
+        sol = solve_ivp(
+            fun=lambda t, y: calculate_forces(t, y, params),
+            t_span=(tspan[0], tspan[-1]),
+            y0=initial,
+            t_eval=tspan, # recall that tspan is an np.arange array - gives us the integral at evenly spaced intervals of dt. Though the solver may take smaller steps to reduce error.
+            method=params['scipy_tag'],
+            vectorized=False,
+            rtol=1e-6,
+            atol=1e-9,
+        )
 
-    t = sol.t # times of the solution
-    states = sol.y.T # the state vector at each time - should be an array; we transpose so that each row is a time and the columns are the states
+        t = sol.t # times of the solution
+        states = sol.y.T # the state vector at each time - should be an array; we transpose so that each row is a time and the columns are the states
+    else: #Use Bulirsch-Stoer to integrate
+        return
 
     X_pos = states[:, 0:n] # all times, colums 0 to n-1 of the state vector
     Y_pos = states[:, (2*n):(3*n)] # all times, colums 2n-1 to 3n-1 of the state vector
