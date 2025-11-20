@@ -65,8 +65,8 @@ def run_simulation(params):
             t_eval=tspan, # recall that tspan is an np.arange array - gives us the integral at evenly spaced intervals of dt. Though the solver may take smaller steps to reduce error.
             method=params['scipy_tag'],
             vectorized=False,
-            rtol=1e-3,
-            atol=1e-3,
+            rtol=params['rtol'],
+            atol=params['atol']
         )
 
         t = sol.t # times of the solution
@@ -155,11 +155,11 @@ def run_simulation(params):
     # ------------------------
     anim = FuncAnimation(fig, update, frames=len(t), interval=100, blit=False)
 
-    filename = "dendrite_growth_simulation.gif"
+    filename = params["filename"]
     print(f"Saving GIF to {filename}...")
     writer = PillowWriter(fps=60)
-    #anim.save(filename, writer=writer)
-    plt.show()
+    anim.save(filename, writer=writer)
+    #plt.show()
 
     plt.close(fig)
     print("Simulation complete. GIF saved.")

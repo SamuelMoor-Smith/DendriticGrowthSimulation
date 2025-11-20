@@ -135,7 +135,7 @@ def drag_force(n, x_v, y_v, eta, Cd):
 
 def interfacial_force(n, x_p, y_p, wI, RI, Lx):
     """
-    Compute interfacial force acting in the x-direction.
+    Compute interfacial force
     """
     # Initialize force array
     FI_x = np.zeros(n)
@@ -143,7 +143,7 @@ def interfacial_force(n, x_p, y_p, wI, RI, Lx):
     # Logical index of particles inside [0, Lx]
     inside = (x_p > 0) & (x_p < Lx)
 
-    # Apply force only for those particles
+    # Apply force only for those particles satisfying the logical index
     term1 = x_p[inside] * np.exp(-(x_p[inside]**2) / RI**2)
     term2 = (x_p[inside] - Lx) * np.exp(-((x_p[inside] - Lx)**2) / RI**2)
 

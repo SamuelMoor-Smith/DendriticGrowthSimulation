@@ -16,9 +16,11 @@ params = { # create a dictionary to hold parameters
     # Integration method
     #--------------------------------
 
-    "BS" : True, # if True, uses custom bulirsch-stoer algorithm, if False it uses scipy.integrate.solve_ivp()
+    "BS" : False, # if True, uses custom bulirsch-stoer algorithm, if False it uses scipy.integrate.solve_ivp()
     'BS_error_per_unit_time': 1e-3,
     "scipy_tag" : "RK45", # should be a string for the method argument of scipy.integrate.solve_ivp()
+    "rtol" : 1e-3, # relative error param for scipy integration
+    "atol" : 1e-3, # absolute error param for scipy integration
 
     #--------------------------------
     # Basic Simulation Parameters
@@ -61,8 +63,8 @@ params = { # create a dictionary to hold parameters
     #--------------------------------
     'm' : 100, # number of pinning sites
     # Pinning Site Locations and Forces
-    "wpa_repulse" :  2000,
-    "wpa_attract" : 500,
+    "wpa_repulse" : 1500, #2000,
+    "wpa_attract" : 375, #500,
 
     #--------------------------------
     # Applied Electric Field Parameters
@@ -91,8 +93,8 @@ params["electrode_width"] = params["L_x"] / 2 # Width of electrodes on material
 params["electrode_height"] = params["L_y"] # Height of electrodes on material
 
 #pinning parameters
-params['wp_attract']=(-(rand(1,params['m']//2))*params['wpa_attract'] - params['wpa_attract']/2) # update the value from a scalar to an array
-params['wp_repulse']=((rand(1,params['m']//2))*params['wpa_repulse'] + params['wpa_repulse']/2)
+params['wp_attract']= (-(rand(1,params['m']//2))*params['wpa_attract'] - params['wpa_attract']/2) # update the value from a scalar to an array
+params['wp_repulse']= ((rand(1,params['m']//2))*params['wpa_repulse'] + params['wpa_repulse']/2)
 params['w_pin'] = np.concatenate((params['wp_attract'], params['wp_repulse']), axis=None) # Combine attractive and repulsive pinning forces into one array
 params['x_pin'] = rand(params['m'],1) * params['L_x'] # Randomly distribute pinning sites in x-direction
 params['y_pin'] = rand(params['m'],1) * params['L_y'] - 0.5*params['L_y'] # Randomly distribute pinning sites in y-direction
@@ -126,3 +128,9 @@ params['num_e'] = 50 # Number of electrons to simulate
 params['Rt'] = 1
 params['lambda'] = 2
 params['steps'] = 120
+
+#--------------------------------
+# File Settings
+#--------------------------------
+
+params["filename"] = "dendrite_growth_simulation-4.gif"
