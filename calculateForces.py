@@ -50,8 +50,7 @@ def calculate_forces(t, states, params):
             )
 
         tindex += 1
-
-        if tindex > 1000 and V != 0: # not sure what this does
+        if tindex > 1000 and V != 0 and params["is_Voltage_constant"]: # after 1000 interations set voltage to 0; only do if the voltage is constant
             V = 0
             print("Voltage set to zero after 1000 iterations")
 
@@ -64,7 +63,7 @@ def calculate_forces(t, states, params):
     # ------------------------
     # Forces
     # ------------------------
-    Fa_x = applied_force(n, x_p, params["alpha"], V, params["L_x"])
+    Fa_x = applied_force(n, x_p, params["alpha"], V, params["L_x"],t)
     Fd_x, Fd_y = drag_force(n, x_v, y_v, params["eta"], params["Cd"])
     FI_x = interfacial_force(n, x_p, y_p, params["wI"], params["RI"], params["L_x"])
     Fp_x, Fp_y = pinning_force(
@@ -113,7 +112,11 @@ def distances(x1, x2, y1, y2):
     return d, dx, dy
 
 
-def applied_force(n, x_p, alpha, V, Lx): # (From Electric Field)
+def applied_force(n, x_p, alpha, V, Lx, t): # (From Electric Field)
+    if not params['is_Voltage_constant']:
+        Volt = params["V_func"](t)
+    else:
+        Volt = V
     # Initialize force to zero
     Fa_x = np.zeros(n)
 
@@ -121,7 +124,7 @@ def applied_force(n, x_p, alpha, V, Lx): # (From Electric Field)
     inside = (x_p < Lx)
 
     # Apply scaling only to particles within [0,Lx]
-    Fa_x[inside] = alpha[inside] * V / ((0.5) * Lx)
+    Fa_x[inside] = alpha[inside] * Volt / ((0.5) * Lx)
 
     return Fa_x
 

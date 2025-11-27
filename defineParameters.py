@@ -61,16 +61,17 @@ params = { # create a dictionary to hold parameters
     #--------------------------------
     # Pinning Force Parameters
     #--------------------------------
-    'm' : 100, # number of pinning sites
+    'm' : 100, # 100 # number of pinning sites
     # Pinning Site Locations and Forces
-    "wpa_repulse" : 1500, #2000,
-    "wpa_attract" : 375, #500,
+    "wpa_repulse" : 2000, #2000,
+    "wpa_attract" : 500, #500,
 
     #--------------------------------
     # Applied Electric Field Parameters
     #--------------------------------
-
-    "V" : 1, # applies voltage
+    
+    "is_Voltage_constant" : False,
+    "V" : 10, # applies voltage
 
     #--------------------------------
     #Residual Stress Parameters
@@ -85,7 +86,7 @@ params = { # create a dictionary to hold parameters
 # add to params
 
 # simulation parameters
-params['dt'] = params["simulation_length"]/2000  # Time step for simulation
+params['dt'] = params["simulation_length"]/200  # Time step for simulation; originally 2000
 params["tspan"] = np.arange(0, params["simulation_length"], params["dt"]) # Time span for simulation output
 
 # material and electrode dimensions
@@ -130,7 +131,29 @@ params['lambda'] = 2
 params['steps'] = 120
 
 #--------------------------------
+# Voltage function
+#--------------------------------
+if not params['is_Voltage_constant']:
+    def voltage(t):
+        time = t % 2e-3 # period of 2 ms
+        if time > 1e-3: # 0 until 1e-3 s and then V onwards; repeats from 2e-3 s
+            return params["V"]
+        else: 
+            return 0
+    params["V_func"] = voltage
+
+#--------------------------------
 # File Settings
 #--------------------------------
 
-params["filename"] = "dendrite_growth_simulation-4.gif"
+params["filename"] = "dendrite_growth_simulation-pulses.gif"
+
+
+# if we run this file directly, do some stuff
+if __name__ == "__main__": # graph the voltage
+    if not params["is_Voltage_constant"]:
+        import matplotlib.pyplot as plt
+        times = np.linspace(0,5e-3,1000)
+        voltages = [ params["V_func"](t) for t in times ]
+        plt.plot(times,voltages)
+        plt.show()
