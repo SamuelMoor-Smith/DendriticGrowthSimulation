@@ -130,6 +130,7 @@ def run_simulation(params):
     # ---- Bottom plot: current vs time ----
     ax2.set_xlim([t[0], t[-1]])
     #ax2.set_ylim([0, params["num_e"]])
+    ax2.set_ylim([0, np.max(I_saved)])
     ax2.set_xlabel("time")
     ax2.set_ylabel("Current I")
     ax2.grid(True)

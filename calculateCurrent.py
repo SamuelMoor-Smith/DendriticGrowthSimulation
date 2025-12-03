@@ -1,5 +1,6 @@
 from defineParameters import params
-from numpy import exp, ones, sum, copy, max, array, argmin, sqrt #tile, zeros, full, isnan, sqrt, min, nan, newaxis, hstack
+from numpy import exp, ones, sum, copy, max, array, argmin, sqrt, argsort #tile, zeros, full, isnan, sqrt, min, nan, newaxis, hstack
+from numpy import append as app
 #from getNextIndex import get_next_index
 
 def distances(x1, x2, y1, y2):
@@ -17,7 +18,7 @@ def boltz_fact(x_i,x_j,Volt, T, L):
     return exp( (V_j - V_i) * params['q'] / params['k_B'] / T ) # \Delta energy is -(V_j - V_i) * -params['q']
 # the above energies assume a paralell plate capacitor of infinte area. This is hopefully a decent approximation
 
-def calculate_current(x, y, L, Volt, lambda_, Rt, T):#, steps, num_e):
+def calculate_current(x, y, L, Volt, lambda_, Rt, T, num_e):
     """
     Translated from MATLAB calculateCurrent.m
     Simulates electron hopping and returns current I.
@@ -25,8 +26,10 @@ def calculate_current(x, y, L, Volt, lambda_, Rt, T):#, steps, num_e):
     x is a vector of particle positions (abscissa)
     y is a vector of particle positions (ordinate)
     """
-    n = len(x)
     threshold_dist = 50
+    x_ind_sort = argsort(x) # sort the x_values from least to most. Return the inicies
+    x_sort = x[x_ind_sort]
+    y_sort = y[x_ind_sort]
 
     # Skip simulation if device too long
     min_distance_to_end = min(L - x) # minimum distance of a particle to the end electrode
@@ -48,25 +51,32 @@ def calculate_current(x, y, L, Volt, lambda_, Rt, T):#, steps, num_e):
     # One last note is that the tunneling probability should be additionally modified by the Boltzmann factor bias that
     # forces migration accordig to the voltage bias. This should allows us to see pulses in the current that mimic pulses in the voltage.
 
-    x_max = max(x)
+    x_max = x_sort[-1]
     inv_Resists = []
-    for i in range(n):
-        # start an electron at the y-level of each particles' x-value.
-        x_i = x[i]
-        y_i = y[i]
+    for i in range(num_e):
+        # start an electron at the y-level of each particles' x-value if that particle is one of the num_e closest particles to the left eleectrode
+        x_i = x_sort[i]
+        y_i = y_sort[i]
         Resist_i = []
         Resist_i.append( Rt * exp( x_i / lambda_) * boltz_fact(0,x_i,Volt,T,L)  )
-        while x_i < x_max:
+        while x_i <= x_max:
             x_possible = x[x > x_i]
             # find nearest particle in front of x_i
             d = distances(x_i,x_possible,y_i,y[x > x_i]) # distance vector comparing each other point x_j to x_i where x_j > x_i
+            # at this point d is an empty array when x_possible is empty
+            d = app(d,L-x_i) # If the final electrode is closer then jump there instead of a particle.
             j = argmin(d)
-            x_j = x_possible[j]
-            # compute resistance of the tunnel
-            Resist_i.append( Rt * exp( d[j] / lambda_) * boltz_fact(x_i,x_j,Volt,T,L)  )
-            x_i = copy(x_j)
-            y_i = x[j]
-        #print(Resist_i)
+            
+            if j == len(d)-1: # if the electrode is the closest jump; always the case when x = x_max
+                Resist_i.append( Rt * exp( d[j] / lambda_) * boltz_fact(x_i,L,Volt,T,L)  )
+                x_i = x_max+1 # terminate the while loop
+            else:
+                x_j = x_possible[j]
+                # compute resistance of the tunnel
+                Resist_i.append( Rt * exp( d[j] / lambda_) * boltz_fact(x_i,x_j,Volt,T,L)  )
+                x_i = copy(x_j)
+                y_i = x[j]
+
         inv_Resists.append( sum(1./array(Resist_i)) )
 
     inv_R = sum(inv_Resists)

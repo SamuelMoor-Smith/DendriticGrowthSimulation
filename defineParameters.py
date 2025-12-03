@@ -125,9 +125,9 @@ params['RI'] = 25 #Interfacial potential distance only with clusters
 #--------------------------------
 # Current Calculation Parameters
 #--------------------------------
-params['num_e'] = 100 # Number of electrons to simulate
+params['num_e'] = 1 #100 # Number of electrons to simulate
 params['Rt'] = 1 # Rt is the tunnelling resistance amplitude (assumed the same for all islands)
-params['lambda'] = 2 # effective tunneling length
+params['lambda'] = 2. # effective tunneling length
 params['steps'] = 120
 
 #--------------------------------
@@ -135,8 +135,8 @@ params['steps'] = 120
 #--------------------------------
 if not params['is_Voltage_constant']:
     def voltage(t):
-        time = t % 2e-3 # period of 2 ms
-        if time > 1e-3: # 0 until 1e-3 s and then V onwards; repeats from 2e-3 s
+        time = t % 2e-2 # period of 2 centi seconds
+        if time > 1e-2: # 0 until 1e-2 s and then V onwards; repeats from 2e-2 s
             return params["V"]
         else: 
             return 0

@@ -54,7 +54,7 @@ def calculate_forces(t, states, params):
             else:
                 I_last = calculate_current(
                     x_p, y_p, params["L_x"], Volt,
-                    params["lambda"], params["Rt"], T#params["steps"], params["num_e"]
+                    params["lambda"], params["Rt"], T, params['num_e']#params["steps"], params["num_e"]
                 )
 
         tindex += 1
