@@ -41,12 +41,12 @@ params = { # create a dictionary to hold parameters
     # --------------------------------
     
     "n" : 500, # Number of particles
-    "simulation_length" : 6, # in seconds
+    "simulation_length" : 0.6, #6, # in seconds
 
     #--------------------------------
     # Initial position box and material size
     #--------------------------------
-    'L_x' : 100, # Size of material in x-direction
+    'L_x' : 60, #100, # Size of material in x-direction
     'L_y' : 100, # Size of material in y-direction
 
     #--------------------------------
@@ -71,7 +71,7 @@ params = { # create a dictionary to hold parameters
     #--------------------------------
     
     "is_Voltage_constant" : False,
-    "V" : 10, # applies voltage
+    "V" : 3, # applies voltage
 
     #--------------------------------
     #Residual Stress Parameters
@@ -79,14 +79,14 @@ params = { # create a dictionary to hold parameters
     'E' : 323.5e9, # Young's modulus of AlN in Pa = N/m^2
     'nu' : 0.23, # Poisson's ratio of AlN, not sure if this should be used or be constant
     "k_C" : 8.99e9, # Coulomb's constant in N*m^2/C^2
-    "q" : elementary_charge, # Elementary charge in C
+    "q" : elementary_charge, # Elementary charge in C (charge of an electron / proton)
     "r_Ag" : 126e-12 # Ionic radius of Ag in m
 }
 
 # add to params
 
 # simulation parameters
-params['dt'] = params["simulation_length"]/200  # Time step for simulation; originally 2000
+params['dt'] = params["simulation_length"]/500  # Time step for simulation; originally 2000
 params["tspan"] = np.arange(0, params["simulation_length"], params["dt"]) # Time span for simulation output
 
 # material and electrode dimensions
@@ -125,9 +125,9 @@ params['RI'] = 25 #Interfacial potential distance only with clusters
 #--------------------------------
 # Current Calculation Parameters
 #--------------------------------
-params['num_e'] = 50 # Number of electrons to simulate
-params['Rt'] = 1
-params['lambda'] = 2
+params['num_e'] = 100 # Number of electrons to simulate
+params['Rt'] = 1 # Rt is the tunnelling resistance amplitude (assumed the same for all islands)
+params['lambda'] = 2 # effective tunneling length
 params['steps'] = 120
 
 #--------------------------------
@@ -146,7 +146,7 @@ if not params['is_Voltage_constant']:
 # File Settings
 #--------------------------------
 
-params["filename"] = "dendrite_growth_simulation-pulses.gif"
+params["filename"] = "dendrite_growth_simulation-pulses-newcurrent.gif"
 
 
 # if we run this file directly, do some stuff
@@ -156,4 +156,5 @@ if __name__ == "__main__": # graph the voltage
         times = np.linspace(0,5e-3,1000)
         voltages = [ params["V_func"](t) for t in times ]
         plt.plot(times,voltages)
+        plt.title("The Voltage Pulses")
         plt.show()

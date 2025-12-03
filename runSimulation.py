@@ -82,7 +82,7 @@ def run_simulation(params):
     Y_pos = states[:, (2*n):(3*n)] # all times, colums 2n-1 to 3n-1 of the state vector
 
     # ------------------------
-    # Plot setupz
+    # Plot setup
     # ------------------------
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8))
     plt.tight_layout(pad=3)
@@ -129,7 +129,7 @@ def run_simulation(params):
 
     # ---- Bottom plot: current vs time ----
     ax2.set_xlim([t[0], t[-1]])
-    ax2.set_ylim([0, params["num_e"]])
+    #ax2.set_ylim([0, params["num_e"]])
     ax2.set_xlabel("time")
     ax2.set_ylabel("Current I")
     ax2.grid(True)
@@ -157,8 +157,8 @@ def run_simulation(params):
 
     filename = params["filename"]
     print(f"Saving GIF to {filename}...")
-    writer = PillowWriter(fps=60)
-    anim.save(filename, writer=writer)
+    writer = PillowWriter(fps=60) #'imagemagick'
+    anim.save(filename, writer=writer)#, fps=60)
     #plt.show()
 
     plt.close(fig)

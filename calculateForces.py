@@ -16,8 +16,14 @@ def calculate_forces(t, states, params):
     Python translation of MATLAB calculateForces.m
     Computes the time derivative dx/dt for all particle states.
     """
-    global tindex, V, I_saved, t_saved, I_last
+
+    global tindex, V, I_saved, t_saved, I_last, Volt
     global rand_dirs_global_x, rand_dirs_global_y
+
+    if not params['is_Voltage_constant']:
+        Volt = params["V_func"](t)
+    else:
+        Volt = V
 
     n = params["n"]
     eta = params["eta"]
@@ -44,18 +50,20 @@ def calculate_forces(t, states, params):
         rand_dirs_global_y = 2 * np.random.randint(0, 2, n) - 1
 
         if tindex % 2 == 0:
-            I_last = calculate_current(
-                x_p, y_p, params["L_x"], V,
-                params["lambda"], params["Rt"], params["steps"], params["num_e"]
-            )
+            if Volt == 0.: I_last = 0. # this should save a lot of time
+            else:
+                I_last = calculate_current(
+                    x_p, y_p, params["L_x"], Volt,
+                    params["lambda"], params["Rt"], T#params["steps"], params["num_e"]
+                )
 
         tindex += 1
-        if tindex > 1000 and V != 0 and params["is_Voltage_constant"]: # after 1000 interations set voltage to 0; only do if the voltage is constant
-            V = 0
+        if tindex > 1000 and Volt != 0 and params["is_Voltage_constant"]: # after 1000 interations set voltage to 0; only do if the voltage is constant
+            Volt = 0
             print("Voltage set to zero after 1000 iterations")
 
         print(f"Time index {tindex} / {len(params['tspan'])}")
-        print(f"Computed I at t = {tindex}, I = {I_last}")
+        print(f"Computed I at t = {tindex}, I = {I_last:.3e}")
 
         I_saved.append(I_last)
         t_saved.append(t)
@@ -63,7 +71,7 @@ def calculate_forces(t, states, params):
     # ------------------------
     # Forces
     # ------------------------
-    Fa_x = applied_force(n, x_p, params["alpha"], V, params["L_x"],t)
+    Fa_x = applied_force(n, x_p, params["alpha"], Volt, params["L_x"],t)
     Fd_x, Fd_y = drag_force(n, x_v, y_v, params["eta"], params["Cd"])
     FI_x = interfacial_force(n, x_p, y_p, params["wI"], params["RI"], params["L_x"])
     Fp_x, Fp_y = pinning_force(
@@ -113,10 +121,6 @@ def distances(x1, x2, y1, y2):
 
 
 def applied_force(n, x_p, alpha, V, Lx, t): # (From Electric Field)
-    if not params['is_Voltage_constant']:
-        Volt = params["V_func"](t)
-    else:
-        Volt = V
     # Initialize force to zero
     Fa_x = np.zeros(n)
 
