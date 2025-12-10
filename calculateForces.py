@@ -53,7 +53,7 @@ def calculate_forces(t, states, params):
             if Volt == 0.: I_last = 0. # this should save a lot of time
             else:
                 I_last = calculate_current(
-                    x_p, y_p, params["L_x"], Volt,
+                    x_p, y_p, params["L_x"],params["L_y"], Volt,
                     params["lambda"], params["Rt"], T, params['num_e']#params["steps"], params["num_e"]
                 )
 

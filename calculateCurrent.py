@@ -1,5 +1,6 @@
 from defineParameters import params
-from numpy import exp, ones, sum, copy, max, array, argmin, sqrt, argsort #tile, zeros, full, isnan, sqrt, min, nan, newaxis, hstack
+from numpy import exp, ones, sum, copy, max, array, argmin, sqrt, argsort, hstack, zeros, float32 #tile, full, isnan, sqrt, min, nan, newaxis
+from numpy.random import rand
 from numpy import append as app
 #from getNextIndex import get_next_index
 
@@ -9,16 +10,87 @@ def distances(x1, x2, y1, y2):
     d = sqrt(dx ** 2 + dy ** 2)
     return d
 
-def boltz_fact(x_i,x_j,Volt, T, L):
+def boltz_fact(x_i,x_j,Volt, T, L_x):
     '''
     x_i is the current location of the electron and x_j is the location of the electron in the proposed step
     '''
-    V_i = Volt * (x_i/L)
-    V_j = Volt * (x_j/L)
+    V_i = Volt * (x_i/L_x)
+    V_j = Volt * (x_j/L_x)
     return exp( (V_j - V_i) * params['q'] / params['k_B'] / T ) # \Delta energy is -(V_j - V_i) * -params['q']
 # the above energies assume a paralell plate capacitor of infinte area. This is hopefully a decent approximation
 
-def calculate_current(x, y, L, Volt, lambda_, Rt, T, num_e):
+def boltz_fact_dist(d,Volt, T, L_x):
+    '''
+    x_i is the current location of the electron and x_j is the location of the electron in the proposed step
+    '''
+    Delta_V = Volt * (d/L_x)
+    return exp( (Delta_V) * params['q'] / params['k_B'] / T ) # \Delta energy is -(V_j - V_i) * -params['q']
+# at a temperature of 300 K, params['q'] / params['k_B'] / T = 38.681727071833606
+# the above energies assume a paralell plate capacitor of infinte area. This is hopefully a decent approximation
+
+
+
+def calculate_current(x, y, L_x, L_y, Volt, lambda_, Rt, T, num_e): # Ben's Monte-Carlo method
+    # What this function does:
+    # 0) If voltage is 0, return 0 since that will be the end result anyway
+    # 1) Introduce num_e electrons at random y-axis locations.
+    # 2) for each particle choose to move forward with boltzman probability or backwards so sum is unity
+    # 3) Find 3 closest particles in the specified direction
+    # 4) Jump to that particle and record the resistence of the jump
+    # 5) Interate until we reach the end electrode
+    # 6) Sum up the resistances of the jumps
+    # 7) Average the resistences together
+    # 8) If not too slow - repeat and average again
+    # 9) Multiply the final reciprial resistence by the voltage - gives the current; return thus value
+
+    if Volt == 0. or Volt == 0: # step 0
+        return 0.
+
+    #Step 1 - introduce electrons on the left electrode
+    e_position = hstack([zeros(num_e),L_y * rand(num_e)],dtype=float32) # use float 32 for performance; most of the error comes from integration anyway
+    # row 0 are x-values; row 1 are y-values
+
+    x_now = copy(x)
+    y_now = copy(y)
+    resist = []
+    for e in range(num_e): #iterate over all simulated electrons
+        x_e, y_e = (e_position[0,e],e_position[1,e])
+        resist_path = [] # resitances along the path of a single electron
+        while x_e < L_x: # while we have not reached the right electrode
+            # step 2: choose direction; use shortest distance to next particle in line to proxy jump distance
+            dx = abs(x_now - x_e)
+            dx_min = min(dx[abs(dx) < 5e-15])
+            Boltzmann_F = boltz_fact_dist(2*dx_min,Volt,T,L_x) # this gives a ratio of occupancies at apprimate closet state to the left vs the appproximate closest state to the right
+
+            # thus we can say that the probability of going right is approximately Boltzmann_F/Boltzmann_B times the probability of going left
+            Probability_left = 1./(1. + Boltzmann_F) # probability of moving left
+            if rand() > Probability_left:
+                Forward = True # choose to move forward with probability according to the electric field energy bias
+            else:
+                Forward = False
+
+            if Forward: # if moving forward
+                x_possible = x[x > x_e]
+            else:
+                x_possible = x[x < x_e]
+                y_possible = y_now[x > x_e]
+            # find nearest particle in front of x_i
+            d = distances(x_e,x_possible,y_e,y_possible) # distance vector comparing each other point x_j to x_i where x_j > x_i
+            # at this point d is an empty array when x_possible is empty
+            d = app(d,L_x-x_e) # If the final electrode is closer then jump there instead of a particle.
+            j = argmin(d)
+            resist_path.append(Rt * exp( d[j] / lambda_))
+            if j < len(d)-1:
+                e_position[0,e], e_position[1,e] = ( x_possible[j], y_possible[j]) # update the electron positions
+            else: # d[j] = L_x - x_e
+                e_position[0,e], e_position[1,e] = ( L_x, 0) # y_position doesn't matter at the end electrode
+        resist.append( sum(resist_path) ) # in the future I would like to make it so that this chooses between the three loswest values with some weight; for now the nearest neighbor model works
+       
+    R = sum(resist)/num_e # average the resitances
+    return Volt / R
+
+
+'''def calculate_current(x, y, L, Volt, lambda_, Rt, T, num_e):
     """
     Translated from MATLAB calculateCurrent.m
     Simulates electron hopping and returns current I.
@@ -82,7 +154,7 @@ def calculate_current(x, y, L, Volt, lambda_, Rt, T, num_e):
     inv_R = sum(inv_Resists)
 
     return inv_R * Volt # return an estimate of the classical current
-
+'''
 # below is the old model
 '''    LEFT_ELECTRODE = n + 1
     RIGHT_ELECTRODE = n + 2
