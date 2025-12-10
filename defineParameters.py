@@ -71,7 +71,7 @@ params = { # create a dictionary to hold parameters
     #--------------------------------
     
     "is_Voltage_constant" : False,
-    "V" : 3, # applies voltage
+    "V" : 10,#3, # applies voltage
 
     #--------------------------------
     #Residual Stress Parameters
@@ -125,9 +125,9 @@ params['RI'] = 25 #Interfacial potential distance only with clusters
 #--------------------------------
 # Current Calculation Parameters
 #--------------------------------
-params['num_e'] = 1 #100 # Number of electrons to simulate
+params['num_e'] = 20 #100 # Number of electrons to simulate
 params['Rt'] = 1 # Rt is the tunnelling resistance amplitude (assumed the same for all islands)
-params['lambda'] = 2. # effective tunneling length
+params['lambda'] = 2 #2. # effective tunneling length
 params['steps'] = 120
 
 #--------------------------------
@@ -146,14 +146,14 @@ if not params['is_Voltage_constant']:
 # File Settings
 #--------------------------------
 
-params["filename"] = "dendrite_growth_simulation-pulses-newcurrent.gif"
+params["filename"] = f"dendrite_growth_simulation-pulses-newcurrent-{params['num_e']}_electrons.gif"
 
 
 # if we run this file directly, do some stuff
 if __name__ == "__main__": # graph the voltage
     if not params["is_Voltage_constant"]:
         import matplotlib.pyplot as plt
-        times = np.linspace(0,5e-3,1000)
+        times = np.linspace(0,5e-1,1000)
         voltages = [ params["V_func"](t) for t in times ]
         plt.plot(times,voltages)
         plt.title("The Voltage Pulses")

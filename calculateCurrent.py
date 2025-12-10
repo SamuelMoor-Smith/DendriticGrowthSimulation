@@ -1,5 +1,5 @@
 from defineParameters import params
-from numpy import exp, ones, sum, copy, max, array, argmin, sqrt, argsort, hstack, zeros, float32 #tile, full, isnan, sqrt, min, nan, newaxis
+from numpy import exp, ones, sum, copy, max, array, argmin, sqrt, argsort, vstack, zeros, float32 #tile, full, isnan, sqrt, min, nan, newaxis
 from numpy.random import rand
 from numpy import append as app
 #from getNextIndex import get_next_index
@@ -47,19 +47,20 @@ def calculate_current(x, y, L_x, L_y, Volt, lambda_, Rt, T, num_e): # Ben's Mont
         return 0.
 
     #Step 1 - introduce electrons on the left electrode
-    e_position = hstack([zeros(num_e),L_y * rand(num_e)],dtype=float32) # use float 32 for performance; most of the error comes from integration anyway
+    e_position = vstack([zeros((1,num_e)),L_y * rand(1,num_e)],dtype=float32) # use float 32 for performance; most of the error comes from integration anyway
     # row 0 are x-values; row 1 are y-values
 
     x_now = copy(x)
     y_now = copy(y)
     resist = []
     for e in range(num_e): #iterate over all simulated electrons
-        x_e, y_e = (e_position[0,e],e_position[1,e])
+        x_e, y_e = (e_position[0,e],e_position[1,e]) # initial electron position
         resist_path = [] # resitances along the path of a single electron
         while x_e < L_x: # while we have not reached the right electrode
+            #print(x_e)
             # step 2: choose direction; use shortest distance to next particle in line to proxy jump distance
             dx = abs(x_now - x_e)
-            dx_min = min(dx[abs(dx) < 5e-15])
+            dx_min = min(dx[abs(dx) >= 5e-15]) # exclude 0
             Boltzmann_F = boltz_fact_dist(2*dx_min,Volt,T,L_x) # this gives a ratio of occupancies at apprimate closet state to the left vs the appproximate closest state to the right
 
             # thus we can say that the probability of going right is approximately Boltzmann_F/Boltzmann_B times the probability of going left
@@ -68,12 +69,15 @@ def calculate_current(x, y, L_x, L_y, Volt, lambda_, Rt, T, num_e): # Ben's Mont
                 Forward = True # choose to move forward with probability according to the electric field energy bias
             else:
                 Forward = False
-
+            if x_e <= 0.:
+                Forward = True # force forward motion if we are at or (somehow) behind the electrode
+            
             if Forward: # if moving forward
                 x_possible = x[x > x_e]
+                y_possible = y_now[x > x_e]
             else:
                 x_possible = x[x < x_e]
-                y_possible = y_now[x > x_e]
+                y_possible = y_now[x < x_e]
             # find nearest particle in front of x_i
             d = distances(x_e,x_possible,y_e,y_possible) # distance vector comparing each other point x_j to x_i where x_j > x_i
             # at this point d is an empty array when x_possible is empty
@@ -81,12 +85,13 @@ def calculate_current(x, y, L_x, L_y, Volt, lambda_, Rt, T, num_e): # Ben's Mont
             j = argmin(d)
             resist_path.append(Rt * exp( d[j] / lambda_))
             if j < len(d)-1:
-                e_position[0,e], e_position[1,e] = ( x_possible[j], y_possible[j]) # update the electron positions
+                x_e, y_e = ( x_possible[j], y_possible[j]) # update the electron positions
             else: # d[j] = L_x - x_e
-                e_position[0,e], e_position[1,e] = ( L_x, 0) # y_position doesn't matter at the end electrode
+                x_e, y_e = ( L_x, 0.) # y_position doesn't matter at the end electrode
         resist.append( sum(resist_path) ) # in the future I would like to make it so that this chooses between the three loswest values with some weight; for now the nearest neighbor model works
-       
-    R = sum(resist)/num_e # average the resitances
+        
+    #R = sum(resist)/num_e # average the resitances
+    R = min(resist) # only use for testing, use above comment for regular use; actually could make some sense if all of the electrons are forced through the few paths of least resistance - could incoorperate some weighted average
     return Volt / R
 
 
