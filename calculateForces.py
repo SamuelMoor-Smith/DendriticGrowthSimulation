@@ -211,7 +211,7 @@ def temperature_fluctuations(n, eta, T_coeff, T, rand_x, rand_y):
 
 def residual_force(n, x_p, y_p, Lx, Ly):
     cell_size = 5.0 #Size of each grid cell
-    w_resid = 1.0 #Strength of residual force
+    w_resid = params["w_resid"] #Strength of residual force
     Nx = max(1, int(np.ceil(Lx / cell_size)))
     Ny = max(1, int(np.ceil(Ly / cell_size)))
 
@@ -227,8 +227,8 @@ def residual_force(n, x_p, y_p, Lx, Ly):
     lin_idx = iy * Nx + ix
     count.flat[lin_idx] = np.maximum(count.flat[lin_idx] - 1, 0)
 
-    def shift(arr, dx, dy):
-        return np.roll(np.roll(arr, dy, axis=0), dx, axis=1)
+    '''def shift(arr, dx, dy):
+        return np.roll(np.roll(arr, dy, axis=0), dx, axis=1)'''
 
     # Left neighbor: shift right, duplicate leftmost column
     count_left = np.hstack((count[:, [0]], count[:, :-1]))

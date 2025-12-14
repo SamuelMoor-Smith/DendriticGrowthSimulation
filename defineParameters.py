@@ -71,11 +71,13 @@ params = { # create a dictionary to hold parameters
     #--------------------------------
     
     "is_Voltage_constant" : False,
-    "V" : 10,#3, # applies voltage
+    "V" : 3,#3, # applies voltage
 
     #--------------------------------
     #Residual Stress Parameters
     #--------------------------------
+    'w_resid' : 1., #1.0, #Strength of residual force
+
     'E' : 323.5e9, # Young's modulus of AlN in Pa = N/m^2
     'nu' : 0.23, # Poisson's ratio of AlN, not sure if this should be used or be constant
     "k_C" : 8.99e9, # Coulomb's constant in N*m^2/C^2

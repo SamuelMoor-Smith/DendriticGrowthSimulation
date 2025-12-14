@@ -120,7 +120,7 @@ While my algorithm last week attempted to fix these issues by computing the curr
 \item Introduce num$_e$ electrons at random y-axis locations.
 \item for each particle choose to move forward with Boltzman probability or backwards so sum is unity. This is done in the following way: find a typical tunneling distance given the location of the electron and use this to find the Boltzmann  factor associated with jumping twice this distance $e^{2d*\frac{V}{L_x}*q_e/k_BT}$ where $d$ is the tunneling distance, $L_x$ is the length of the device, $V$ is the voltage across the terminals, $q_e$ is the charge of a proton. Then the relative occupations at the site $d$ behind the current position and $d$ in front is $\frac{N_b}{N_f} = e^{e^{2d*\frac{V}{L_x}*q_e/k_BT}}$ so we take the probability of moving forward to be $p_f = \frac{1}{1+e^{e^{2d*\frac{V}{L_x}*q_e/k_BT}}}$ so that $\frac{p_f}{p_b} = e^{e^{2d*\frac{V}{L_x}*q_e/k_BT}}$ and $p_f + p_b = 1$.
 \item Find the closest particle in the specified direction
-\item Jump to that particle and record the resistance of the jump as $R_{\text{jump}} = R_t e^{d/\lambda}$ where $d$ is not the actual distance of the jump.
+\item Jump to that particle and record the resistance of the jump as $R_{\text{jump}} = R_t e^{d/\lambda}$ where $d$ is now the actual distance of the jump.
 \item Update the position of the electrons
 \item Repeat for each electron until all electrons have reached the end electrode
 \item Sum up the resistances of the jumps. This is the resistance of a single path
@@ -178,5 +178,17 @@ Essentially voltage affects three things, the speed of the simulation, the maxim
 
 We see clearly then that the desired choice of $\lambda$ is on the order of $1$. Our choice of $2$ works well.
 
+\section{effect of the residual force on the current history}
+
+The strength of the residual force is taken to be given by the parameter $\omega$.
+
+\begin{figure}[H]
+--\includegraphics[width=0.3\textwidth]{last_frame_w-0-100elec.png}
+\includegraphics[width=0.3\textwidth]{20e-frame_499_delay-0.01s.png}
+\includegraphics[width=0.3\textwidth]{last_frame_w-10.png}
+\caption{From left to right we show $\omega = 0, 1, 10$.}
+\end{figure}
+
+We see that this range of $\omega$ has essentially no effect on the current history. In addition, the residual forces are not physical so I would move to completely remove them from the simulation.
 
 \end{document}
